@@ -67,6 +67,11 @@ Vague goal → structured implementation context
 
 The value is not only producing a document, but reducing ambiguity before coding begins.
 
+## How It Works
+
+SpecBaker is a command-line tool that takes a user goal as input and generates a structured spec.
+The tool is built on top of IBM's [watsonx.ai]
+
 ## Hackathon Positioning
 
 For the IBM Bob Hackathon, SpecBaker demonstrates how IBM Bob can work faster and more accurately when given better structured context.
