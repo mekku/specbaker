@@ -40,6 +40,20 @@ class MarkdownFormatter {
     }
 
     /**
+     * Format Q&A
+     */
+    formatQna(context) {
+        logger.debug('Formatting Q&A as markdown');
+        let formatted = ""
+        for (const qna of context) {
+            let { question, answer } = qna;
+            logger.debug(qna);
+            formatted += `### Question: ${question}\n\n    Answer:${answer}\n\n`;
+        }
+        return formatted;
+    }
+
+    /**
      * Format individual section
      */
     formatSection(sectionName, content) {

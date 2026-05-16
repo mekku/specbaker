@@ -8,7 +8,7 @@
 
 ## 🌟 Overview
 
-**SpecBaker** is a CLI tool that helps you turn vague software goals into comprehensive, structured specifications. It uses IBM watsonx.ai to intelligently analyze your ideas, ask clarifying questions, and generate complete technical specifications that are ready for implementation with IBM Bob or any development team.
+**SpecBaker** is a CLI first and WebUI (Provided) tool that helps you turn vague software goals into comprehensive, structured specifications. It uses IBM watsonx.ai to intelligently analyze your ideas, ask clarifying questions, and generate complete technical specifications that are ready for implementation with IBM Bob or any development team.
 
 ### The Problem
 

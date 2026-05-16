@@ -261,10 +261,19 @@ Would you like to continue answering them?`,
 
         // Step 6: Write to file
         const outputPath = path.resolve(options.output);
+        const outputPathContext = path.resolve(options.output.replace(".md", ".chat.md"));
         logger.progress(`Writing to ${outputPath}`);
+
+        // Format output context (Q&A)
+        const qnas = contextBuilder.getQuestionsAndAnswers()
+        logger.debug(qnas)
+        const qnaMarkdown = formatter.formatQna(qnas);
+        fs.writeFileSync(outputPathContext, qnaMarkdown, 'utf8');
+
 
         try {
             fs.writeFileSync(outputPath, normalized, 'utf8');
+            fs.writeFileSync(outputPathContext, qnaMarkdown, 'utf8');
             logger.progressDone();
         } catch (error) {
             logger.error(`Failed to write file: ${error.message}`);

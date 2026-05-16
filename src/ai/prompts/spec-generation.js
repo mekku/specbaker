@@ -196,7 +196,7 @@ Generate an Implementation Plan section that includes:
 
 Format as markdown with clear phases. Be realistic, practical, and suitable for actual development planning.`,
 
-    'AI Initial Prompt': `${BASE_CONTEXT}
+    'Bob-Ready Prompt': `${BASE_CONTEXT}
 
 Generate an AI-Ready Initial Prompt section.
 
