@@ -90,7 +90,61 @@ async function generateCommand(goal, options) {
             // Show summary
             prompter.displaySummary(questions, answers);
 
-            // Step 3.5: Optional Developer/Technical Questions
+            // Step 3.5: Deep-dive questioning (unlimited rounds, priority-based)
+            logger.newline();
+            logger.info('💡 Tip: You can stop the questioning at any time by saying "no" to continue.');
+            logger.newline();
+
+            let allAnswers = { ...answers };
+            let round = 1;
+            let continueDeepDive = true;
+
+            while (continueDeepDive) {
+                const wantsFollowUp = await prompter.confirm(
+                    `\nWould you like to dive deeper with follow-up questions? (Round ${round})`,
+                    round === 1 // Default yes for first round
+                );
+
+                if (!wantsFollowUp) {
+                    logger.info('✓ Proceeding with current level of detail.');
+                    break;
+                }
+
+                logger.info(`\n🔍 Analyzing your answers to identify areas needing clarification...`);
+
+                const followUpQuestions = await questionGenerator.generateFollowUpRound(
+                    contextBuilder.getContext(),
+                    allAnswers,
+                    round
+                );
+
+                if (followUpQuestions.length === 0) {
+                    logger.success('✓ All areas are sufficiently detailed!');
+                    break;
+                }
+
+                // Sort by priority (highest first)
+                followUpQuestions.sort((a, b) => (a.priority || 2) - (b.priority || 2));
+
+                contextBuilder.addQuestions(followUpQuestions);
+                logger.info(`\nAsking ${followUpQuestions.length} follow-up questions (highest priority first)...`);
+                logger.info('💡 Remember: You can stop at any question.\n');
+
+                const followUpAnswers = await prompter.askQuestions(followUpQuestions);
+
+                // Add follow-up answers to context
+                for (const [questionId, answer] of Object.entries(followUpAnswers)) {
+                    contextBuilder.addAnswer(questionId, answer);
+                    allAnswers[questionId] = answer;
+                }
+
+                // Show summary of follow-up answers
+                prompter.displaySummary(followUpQuestions, followUpAnswers);
+
+                round++;
+            }
+
+            // Step 3.6: Optional Developer/Technical Questions
             const wantsDeveloperQuestions = await shouldAskDeveloperQuestions(prompter);
 
             if (wantsDeveloperQuestions) {
@@ -111,7 +165,7 @@ async function generateCommand(goal, options) {
 
             // Confirm before generating
             const shouldGenerate = await prompter.confirm(
-                'Generate specification with these answers?',
+                '\nGenerate specification with all these answers?',
                 true
             );
 

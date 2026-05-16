@@ -13,7 +13,8 @@ class QuestionGenerator {
     constructor(watsonxClient, config) {
         this.watsonxClient = watsonxClient;
         this.config = config;
-        this.maxQuestions = config.prompts.maxQuestions || 10;
+        // No hard limit on questions - let the conversation flow naturally
+        this.maxQuestions = config.prompts.maxQuestions || 999;
     }
 
     /**
@@ -45,13 +46,13 @@ class QuestionGenerator {
             questions = this.generateTemplateQuestions(analysis);
         }
 
-        // Ensure questions have proper structure
+        // Ensure questions have proper structure and detect allowMultiple
         questions = questions.map((q, index) => ({
             id: q.id || `q${index + 1}`,
             category: q.category || 'General',
             text: q.text,
             priority: q.priority || 2,
-            allowMultiple: q.allowMultiple || false,
+            allowMultiple: q.allowMultiple !== undefined ? q.allowMultiple : this.detectAllowMultiple(q.text),
             dependsOn: q.dependsOn || [],
             suggestedAnswers: q.suggestedAnswers || []
         }));
@@ -273,6 +274,95 @@ class QuestionGenerator {
         // Return highest priority available question
         available.sort((a, b) => a.priority - b.priority);
         return available[0];
+    }
+
+    /**
+     * Detect if a question should allow multiple selections
+     */
+    detectAllowMultiple(questionText) {
+        const text = questionText.toLowerCase();
+
+        // Keywords that suggest multiple selection
+        const multipleKeywords = [
+            'which', 'what', 'select', 'choose',
+            'features', 'platforms', 'users', 'types',
+            'methods', 'systems', 'integrations',
+            'requirements', 'constraints', 'criteria'
+        ];
+
+        // Phrases that suggest multiple selection
+        const multiplePhrases = [
+            'top 3', 'top three', 'top 5', 'top five',
+            'most important', 'critical features',
+            'key features', 'main features',
+            'which of', 'what are', 'list',
+            'multiple', 'several', 'various'
+        ];
+
+        // Check for multiple indicators
+        const hasMultipleKeyword = multipleKeywords.some(keyword => text.includes(keyword));
+        const hasMultiplePhrase = multiplePhrases.some(phrase => text.includes(phrase));
+
+        // Questions asking for specific numbers (top 3, etc.) should allow multiple
+        const hasNumberRequest = /top \d+|top (three|five|ten)/i.test(text);
+
+        return hasMultipleKeyword && (hasMultiplePhrase || hasNumberRequest);
+    }
+
+    /**
+     * Generate follow-up questions based on answers (for deeper context)
+     */
+    async generateFollowUpRound(context, previousAnswers, roundNumber) {
+        logger.info(`\nGenerating follow-up questions (Round ${roundNumber})...`);
+
+        try {
+            // Analyze previous answers to find areas needing clarification
+            const areasNeedingClarification = this.identifyUnclearAreas(previousAnswers);
+
+            if (areasNeedingClarification.length === 0) {
+                logger.info('No additional clarification needed.');
+                return [];
+            }
+
+            // Generate targeted follow-up questions
+            const followUpQuestions = await this.watsonxClient.generateQuestions({
+                goal: context.goal,
+                analysis: context.analysis,
+                previousAnswers: previousAnswers,
+                areasToClarity: areasNeedingClarification,
+                roundNumber: roundNumber,
+                maxQuestions: Math.min(5, this.maxQuestions)
+            });
+
+            if (followUpQuestions && followUpQuestions.length > 0) {
+                return followUpQuestions.slice(0, 5); // Limit to 5 follow-ups per round
+            }
+        } catch (error) {
+            logger.warn('Failed to generate follow-up questions:', error.message);
+        }
+
+        return [];
+    }
+
+    /**
+     * Identify areas that need more clarification
+     */
+    identifyUnclearAreas(answers) {
+        const unclear = [];
+
+        for (const [questionId, answer] of Object.entries(answers)) {
+            const answerText = answer.toLowerCase();
+
+            // Check for vague answers
+            if (answerText.includes('not sure') ||
+                answerText.includes('maybe') ||
+                answerText.includes('not specified') ||
+                answerText.length < 10) {
+                unclear.push(questionId);
+            }
+        }
+
+        return unclear;
     }
 
     /**

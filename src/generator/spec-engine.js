@@ -92,17 +92,8 @@ class SpecEngine {
     async generateSection(sectionName, contextData) {
         logger.debug(`Generating section: ${sectionName}`);
 
-        // Get section-specific prompt
-        const prompt = this.getSectionPrompt(sectionName, contextData);
-
-        // Generate content using AI
-        const content = await this.watsonxClient.generateSection(sectionName, {
-            goal: contextData.goal,
-            analysis: contextData.analysis,
-            answers: contextData.answersByCategory,
-            decisions: contextData.decisions,
-            prompt
-        });
+        // Generate content using AI (prompt is handled in watsonx-client)
+        const content = await this.watsonxClient.generateSection(sectionName, contextData);
 
         // Validate and clean content
         const validated = this.validateSection(sectionName, content);
