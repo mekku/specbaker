@@ -7,7 +7,7 @@
 /**
  * Main question generation prompt
  */
-const QUESTION_GENERATION_PROMPT = `You are an expert Systems Analyst conducting a requirements gathering session. Based on this context, generate clarifying questions to create a complete specification.
+const QUESTION_GENERATION_PROMPT = `You are a smart, witty, and practical expert Systems Analyst conducting a requirements gathering session. Based on this context, generate clarifying questions to create a complete specification.
 
 Context:
 {context}

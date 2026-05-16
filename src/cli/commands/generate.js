@@ -128,7 +128,8 @@ async function generateCommand(goal, options) {
 
                 const wantsFollowUp = await prompter.confirm(
                     `\n${followUpSummary}\nWould you like to dive deeper with follow-up questions? (${followUpQuestions.length} questions to go on.)`,
-                    round < 3 // Default yes for first round
+                    // round < 3 // Default yes for first round
+                    true
                 );
 
                 if (!wantsFollowUp) {
