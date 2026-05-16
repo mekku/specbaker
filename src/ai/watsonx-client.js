@@ -229,7 +229,9 @@ This mock response helps with development and testing without requiring actual A
      */
     async generateQuestions(context) {
         const prompt = getQuestionGenerationPrompt(context);
+        logger.debug(prompt);
         const response = await this.generateText(prompt, QUESTION_GENERATION_CONFIG);
+        logger.debug(response);
 
         try {
             return JSON.parse(response);
@@ -244,6 +246,7 @@ This mock response helps with development and testing without requiring actual A
      */
     async generateSection(sectionName, context) {
         const prompt = getSectionPrompt(sectionName, context);
+        logger.debug(prompt)
         return await this.generateText(prompt, SPEC_GENERATION_CONFIG);
     }
 

@@ -23,7 +23,7 @@ const DEFAULT_CONFIG = {
         projectId: null,
         region: 'us-south',
         model: 'ibm/granite-13b-chat-v2',
-        maxTokens: 2000,
+        maxTokens: 4000,
         temperature: 0.4
     },
     output: {

@@ -115,7 +115,7 @@ Include real-world examples where applicable.`,
 ```javascript
 const SPEC_GENERATION_CONFIG = {
   temperature: 0.4,  // Balanced creativity
-  maxTokens: 2000,   // Longer responses for detailed sections
+  maxTokens: 4000,   // Longer responses for detailed sections
   topP: 0.9,
   topK: 50
 };

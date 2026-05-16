@@ -20,7 +20,7 @@ Provide a JSON response with:
    - features: Array of features mentioned
    - constraints: Array of constraints mentioned
 5. ambiguities - Array of things that need clarification
-6. suggestedQuestions - Array of 3-5 initial questions to ask
+6. suggestedQuestions - Array of at least 3 initial questions to ask
 
 Format your response as valid JSON only, no additional text.
 
@@ -57,7 +57,7 @@ function getGoalAnalysisPrompt(goal) {
  */
 const GOAL_ANALYSIS_CONFIG = {
     temperature: 0.3,
-    maxTokens: 800,
+    maxTokens: 4000,
     topP: 0.9,
     topK: 50
 };

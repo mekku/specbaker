@@ -95,11 +95,37 @@ async function generateCommand(goal, options) {
             logger.info('💡 Tip: You can stop the questioning at any time by saying "no" to continue.');
             logger.newline();
 
+            // Combine pair of question and and answer
             let allAnswers = { ...answers };
             let round = 1;
             let continueDeepDive = true;
 
             while (continueDeepDive) {
+                logger.info(`\n🔍 Analyzing your answers to identify areas needing clarification...`);
+
+                logger.debug(allAnswers);
+
+                let allAnswersWithQuestion = contextBuilder.getQuestionsAndAnswers();
+                logger.debug(allAnswersWithQuestion);
+
+                const followUpQuestionsResult = await questionGenerator.generateFollowUpRound(
+                    contextBuilder.getContext(),
+                    allAnswersWithQuestion,
+                    round
+                );
+                logger.debug(followUpQuestionsResult);
+                const followUpQuestions = followUpQuestionsResult.questions;
+                const followUpSummary = followUpQuestionsResult.summary;
+
+                logger.info(`Follow-up questions for round ${round}:`);
+                logger.info(followUpSummary)
+
+
+                if (followUpQuestions.length === 0) {
+                    logger.success('✓ All areas are sufficiently detailed!');
+                    break;
+                }
+
                 const wantsFollowUp = await prompter.confirm(
                     `\nWould you like to dive deeper with follow-up questions? (Round ${round})`,
                     round === 1 // Default yes for first round
@@ -107,19 +133,6 @@ async function generateCommand(goal, options) {
 
                 if (!wantsFollowUp) {
                     logger.info('✓ Proceeding with current level of detail.');
-                    break;
-                }
-
-                logger.info(`\n🔍 Analyzing your answers to identify areas needing clarification...`);
-
-                const followUpQuestions = await questionGenerator.generateFollowUpRound(
-                    contextBuilder.getContext(),
-                    allAnswers,
-                    round
-                );
-
-                if (followUpQuestions.length === 0) {
-                    logger.success('✓ All areas are sufficiently detailed!');
                     break;
                 }
 

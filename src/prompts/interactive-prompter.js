@@ -133,18 +133,18 @@ class InteractivePrompter {
                 const answer = await this.askQuestion(question, i + 1, totalQuestions);
                 answers[question.id] = answer;
 
-                // Ask if user wants to continue after each answer
-                if (i < questions.length - 1) {
-                    const shouldContinue = await this.confirm(
-                        'Continue to next question?',
-                        true
-                    );
+                // Ask if user wants to continue after each answer // I think this look stupid
+                // if (i < questions.length - 1) {
+                //     const shouldContinue = await this.confirm(
+                //         'Continue to next question?',
+                //         true
+                //     );
 
-                    if (!shouldContinue) {
-                        logger.info('Stopping questions. You can continue later or generate spec with current answers.');
-                        break;
-                    }
-                }
+                //     if (!shouldContinue) {
+                //         logger.info('Stopping questions. You can continue later or generate spec with current answers.');
+                //         break;
+                //     }
+                // }
             } catch (error) {
                 if (error.isTtyError) {
                     logger.error('Prompt could not be rendered in this environment');

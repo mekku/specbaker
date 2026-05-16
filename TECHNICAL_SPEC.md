@@ -591,7 +591,7 @@ tests/integration/
 ```javascript
 const LIMITS = {
   MAX_GOAL_LENGTH: 5000,        // characters
-  MAX_ANSWER_LENGTH: 2000,      // characters
+  MAX_ANSWER_LENGTH: 4000,      // characters
   MAX_QUESTIONS: 20,            // per session
   MAX_RETRIES: 3,               // API retries
   TIMEOUT: 30000,               // 30 seconds per API call

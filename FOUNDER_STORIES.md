@@ -261,9 +261,99 @@ const content = await this.watsonxClient.generateSection(sectionName, contextDat
 
 ---
 
+### 7. No Fallback Templates - AI Required (May 16, 2026)
+
+**Problem Identified:**
+- When AI question/spec generation fails, fallback templates create misleading specifications
+- Example: "Warehouse management app" showing "General public, Business users" as user options
+- Template-generated specs are low quality and not useful for developers
+- Users might not realize the spec is template-based, not AI-generated
+
+**Root Cause:**
+- Fallback templates were meant to be helpful but actually mislead users
+- Generic templates cannot capture domain-specific nuances
+- Quality of template specs is too low to be useful
+
+**Critical Decision:**
+**REMOVE ALL FALLBACK TEMPLATES. Require working AI connection.**
+
+**Rationale:**
+- **Quality over availability**: A bad spec is worse than no spec
+- **Clear failure**: Users should know immediately if AI isn't working
+- **No misleading content**: Templates give false confidence
+- **Force proper setup**: Ensures users configure watsonx.ai correctly
+- **Maintain reputation**: SpecBaker's value is AI-powered quality
+
+**Implementation:**
+Changed from graceful degradation to fail-fast approach:
+
+**Question Generation:**
+```javascript
+// Before: Fallback to templates
+catch (error) {
+    logger.warn('AI failed, using template questions');
+    questions = this.generateTemplateQuestions(analysis);
+}
+
+// After: Fail with clear message
+catch (error) {
+    logger.error('AI question generation failed');
+    logger.error('SpecBaker requires a working AI connection.');
+    logger.info('Please ensure your watsonx.ai API key is configured');
+    throw new Error('Cannot proceed without AI');
+}
+```
+
+**Spec Generation:**
+```javascript
+// Before: Fallback to template content
+catch (error) {
+    spinner.warn(`${section.name} generation failed, using template`);
+    this.generatedSections[section.key] = this.getFallbackContent(section.name);
+}
+
+// After: Fail immediately
+catch (error) {
+    spinner.fail(`${section.name} generation failed`);
+    logger.error('SpecBaker requires working AI connection');
+    throw new Error(`AI generation failed at section: ${section.name}`);
+}
+```
+
+**User Experience:**
+When AI fails, users now see:
+```
+❌ AI question generation failed
+❌ SpecBaker requires a working AI connection to generate quality specifications.
+
+Please ensure:
+1. Your watsonx.ai API key is configured correctly
+2. Your project ID is valid
+3. You have network connectivity
+
+Run: specbaker config setup
+```
+
+**Files Modified:**
+- `src/generator/question-generator.js` - Removed template fallback, added clear error
+- `src/generator/spec-engine.js` - Removed template fallback, fail immediately
+
+**Impact:**
+- ✅ **No misleading specifications** - Users know immediately if something is wrong
+- ✅ **Forces proper setup** - Users must configure AI correctly
+- ✅ **Maintains quality** - Only AI-generated specs are produced
+- ✅ **Clear error messages** - Users know exactly what to fix
+- ✅ **Protects reputation** - SpecBaker only produces quality output
+
+**Philosophy:**
+> "It's better to fail clearly than to succeed poorly. A bad specification is worse than no specification."
+
+---
+
 ## Future Considerations
 
 ### Potential Improvements
+- [ ] Add more domain-specific templates (manufacturing, real estate, etc.)
 - [ ] Add specification templates for common project types
 - [ ] Implement specification versioning and comparison
 - [ ] Add collaborative features for team specification building

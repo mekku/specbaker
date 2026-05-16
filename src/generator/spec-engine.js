@@ -58,11 +58,14 @@ class SpecEngine {
 
                     spinner.succeed(`${section.name} generated`);
                 } catch (error) {
-                    spinner.warn(`${section.name} generation failed, using template`);
-                    logger.debug(`Error generating ${section.name}:`, error);
-
-                    // Use fallback template
-                    this.generatedSections[section.key] = this.getFallbackContent(section.name, contextData);
+                    spinner.fail(`${section.name} generation failed`);
+                    logger.error(`Failed to generate ${section.name}`);
+                    logger.error('SpecBaker requires a working AI connection to generate quality specifications.');
+                    logger.newline();
+                    logger.info('Please ensure your watsonx.ai configuration is correct.');
+                    logger.info('Run: specbaker config setup');
+                    logger.debug(error)
+                    throw new Error(`AI specification generation failed at section: ${section.name}`);
                 }
 
                 // Small delay to avoid rate limiting

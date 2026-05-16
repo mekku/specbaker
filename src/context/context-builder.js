@@ -89,6 +89,25 @@ class ContextBuilder {
     }
 
     /**
+     * Get all questions and answers as json array
+     */
+    getQuestionsAndAnswers() {
+        const questionsAndAnswers = [];
+        for (const question of this.context.questions) {
+            const answerData = this.context.answers.get(question.id);
+            const answer = answerData ? answerData.answer : "-";
+            logger.debug(`Answer for question ${question.text}: ${answer}`);
+            questionsAndAnswers.push({
+                qid: question.id,
+                question: question.text,
+                answer: this.getAnswer(question.id)
+            });
+        }
+        return questionsAndAnswers;
+    }
+
+
+    /**
      * Record a decision
      */
     addDecision(decision) {

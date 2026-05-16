@@ -204,8 +204,8 @@ function validateAnswer(answer) {
         return { valid: false, error: 'Answer cannot be empty' };
     }
 
-    if (trimmedAnswer.length > 2000) {
-        return { valid: false, error: 'Answer is too long. Please keep it under 2000 characters' };
+    if (trimmedAnswer.length > 4000) {
+        return { valid: false, error: 'Answer is too long. Please keep it under 4000 characters' };
     }
 
     return { valid: true, value: trimmedAnswer };
