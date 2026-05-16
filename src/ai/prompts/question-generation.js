@@ -282,6 +282,8 @@ When sufficient, return:
 {
   "summary": "The current information is sufficient for this stage. The next step should be generating or updating the MVP specification. Remaining minor gaps can be handled as assumptions.",
   "roundType": "No More Questions",
+  "confidenceScore": 90,
+  "confidenceReason": "The MVP scope, primary users, core workflow, and main data are clear enough to produce a useful specification. Remaining gaps can be handled as assumptions.",
   "questions": []
 }
 
