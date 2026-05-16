@@ -2,10 +2,6 @@
   <img src="cover.png" alt="SpecBaker — Turn vague software goals into structured, Bob-ready specs" width="900" />
 </p>
 
-<p align="center">
-  <img src="public/logo.png" alt="SpecBaker logo" width="160" />
-</p>
-
 # SpecBaker
 
 > Transform vague software ideas into structured, implementation-ready specifications using IBM watsonx.ai
