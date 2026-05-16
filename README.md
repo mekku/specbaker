@@ -42,6 +42,8 @@ SpecBaker solves this by:
 - 🔧 **Configurable** - Customize questions, models, and output
 - 🌐 **Web Interface** - User-friendly browser-based UI (no CLI needed!)
 
+See demo: https://specbaker-production.up.railway.app
+
 ## 📦 Installation
 
 ### Prerequisites
