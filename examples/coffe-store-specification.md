@@ -149,10 +149,10 @@ graph TD
     StoreManager -->|views| Analytics
     SysAdmin -->|manages| Users
     SysAdmin -->|maintains| System
-    classDef primary fill:#e3f2fd,stroke:#2196f3,stroke-width:2px;
-    classDef secondary fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px;
-    Customer,Barista,StoreManager class primary;
-    SysAdmin class secondary;
+    classDef primary fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef secondary fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    class Customer,Barista,StoreManager primary
+    class SysAdmin secondary
 ```
 
 *The diagram shows the flow of responsibilities and which role interacts with which core entity.*
@@ -710,8 +710,8 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    P[Payment Success] --> Q[Calculate points (floor(total/1))]
-    Q --> R[Add points to Customer.account]
+    P[Payment Success] --> Q["Calculate points (floor(total/1))"]
+    Q --> R["Add points to Customer.account"]
     R --> S[Show updated balance]
 ```
 
@@ -940,7 +940,7 @@ classDiagram
         id: UUID
         email: string
         passwordHash: string
-        role: enum{Customer,Barista,StoreManager}
+        role: String
         loyaltyPoints: int
     }
     class MenuItem {
@@ -965,9 +965,9 @@ classDiagram
         id: UUID
         customerId: UUID
         totalAmount: decimal
-        paymentMethod: enum{Card,Cash}
-        paymentStatus: enum{Pending,Paid,Failed}
-        status: enum{Received,Preparing,Ready,Completed}
+        paymentMethod: String
+        paymentStatus: String
+        status: String
         createdAt: datetime
     }
     class OrderItem {
@@ -2097,7 +2097,7 @@ flowchart TD
     E -->|Cash| G[Record Cash]
     F --> H[Payment Success]
     G --> H
-    H --> I[Create Order (status=Received)]
+    H --> I["Create Order (status=Received)"]
     I --> J[Push status to Barista UI]
     J --> K[Barista sets status to Preparing]
     K --> L[Auto‑deduct inventory]
@@ -2608,18 +2608,18 @@ Deliver a **minimum viable product (MVP)** that enables:
 
 ```mermaid
 graph TD
-    A[Client: Web React] -->|HTTPS| B[API Gateway (NGINX)]
+    A[Client: Web React] -->|HTTPS| B["API Gateway (NGINX)"]
     C[Client: Mobile RN] -->|HTTPS| B
-    B --> D[Auth Service (JWT)]
+    B --> D["Auth Service (JWT)"]
     B --> E[Order Service]
     B --> F[Menu Service]
     B --> G[Loyalty Service]
-    B --> H[Payment Service (Stripe SDK)]
+    B --> H["Payment Service (Stripe SDK)"]
     E --> I[PostgreSQL DB]
     F --> I
     G --> I
     H --> I
-    E --> J[WebSocket (Socket.io) for live status]
+    E --> J["WebSocket (Socket.io) for live status"]
     J --> A
     J --> C
 ```
