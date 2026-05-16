@@ -319,16 +319,16 @@ With this specification, the engineering team can build the MVP’s role‑based
 ```mermaid
 flowchart LR
     subgraph Client[Client Apps]
-        CWeb[Web SPA (Customer)]
-        CMobile[Mobile App (Customer)]
-        BWeb[Web Portal (Barista)]
-        MWeb[Web Portal (Manager)]
+        CWeb["Web SPA (Customer)"]
+        CMobile["Mobile App (Customer)"]
+        BWeb["Web Portal (Barista)"]
+        MWeb["Web Portal (Manager)"]
     end
 
     subgraph API[Backend API]
         Auth[Auth Service]
         Order[Order Service]
-        Payment[Payment Service (Stripe)]
+        Payment["Payment Service (Stripe)"]
         Loyalty[Loyalty Service]
         Inventory[Inventory Service]
         Menu[Menu Service]
@@ -420,12 +420,12 @@ flowchart TD
     E -->|Cash| G[Cash Flag]
     F --> H[Submit Order]
     G --> H
-    H --> I[Order Created – status=Received]
+    H --> I["Order Created – status=Received"]
     I --> J[Show Order Summary + Loyalty Earned]
-    J --> K[Real‑time Status Polling]
+    J --> K[Real-time Status Polling]
     K --> L{Status Changes}
-    L -->|Preparing| M[Allow Cancel? No]
-    L -->|Ready| N[Notify Customer (UI change)]
+    L -->|Preparing| M["Allow Cancel? No"]
+    L -->|Ready| N["Notify Customer (UI change)"]
     L -->|Completed| O[Show Completed screen]
 ```
 
@@ -434,15 +434,15 @@ flowchart TD
 ```mermaid
 flowchart TD
     B1[Login as Barista] --> B2[Open POS Dashboard]
-    B2 --> B3[New Orders List (status=Received)]
-    B3 --> B4[Select Order → View Details]
-    B4 --> B5[Press “Start Preparing”]
+    B2 --> B3["New Orders List (status=Received)"]
+    B3 --> B4["Select Order - View Details"]
+    B4 --> B5["Press Start Preparing"]
     B5 --> B6[System deducts inventory]
-    B6 --> B7[Status → Preparing]
-    B7 --> B8[When Ready → Press “Ready”]
-    B8 --> B9[Status → Ready]
-    B9 --> B10[When Served → Press “Completed”]
-    B10 --> B11[Status → Completed]
+    B6 --> B7["Status: Preparing"]
+    B7 --> B8["When Ready - Press Ready"]
+    B8 --> B9["Status: Ready"]
+    B9 --> B10["When Served - Press Completed"]
+    B10 --> B11["Status: Completed"]
 ```
 
 #### 2.2.3. Manager Configuration
@@ -523,11 +523,11 @@ flowchart TD
 ```mermaid
 graph LR
     subgraph Frontend
-        Web[Web SPA (React)]
-        Mobile[Mobile App (React Native)]
+        Web["Web SPA (React)"]
+        Mobile["Mobile App (React Native)"]
     end
     subgraph Backend
-        API[REST API (Node/Express or FastAPI)]
+        API["REST API (Node/Express or FastAPI)"]
         DB[(PostgreSQL)]
         Stripe[Stripe Payment Gateway]
     end

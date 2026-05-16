@@ -296,8 +296,6 @@ class SpecBakerApp {
                         ` : ''}
                         <div style="background: #e8f5e9; padding: 20px; border-radius: 6px; border-left: 4px solid #24a148; margin-bottom: 20px;">
                             <h3 style="margin: 0 0 12px 0; color: #24a148;">✓ Requirements are sufficient for software specification!</h3>
-                            <p style="margin: 0;"><strong>Confidence:</strong> ${confidenceScore}/100</p>
-                            <p style="margin: 8px 0 0 0;"><strong>Reason:</strong> ${confidenceReason}</p>
                         </div>
                         <p>Your answers provide enough information to generate a comprehensive specification.</p>
                     </div>
@@ -316,7 +314,7 @@ class SpecBakerApp {
 
             // Determine confidence level styling
             const getConfidenceColor = (score) => {
-                if (score >= 85) return { bg: '#e8f5e9', border: '#24a148', text: '#24a148' };
+                if (score >= 85) return { bg: '#e8f5e9', border: '#a1ada4', text: '#24a148' };
                 if (score >= 70) return { bg: '#fff3e0', border: '#f57c00', text: '#f57c00' };
                 return { bg: '#ffebee', border: '#d32f2f', text: '#d32f2f' };
             };
