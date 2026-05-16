@@ -13,6 +13,7 @@ const packageJson = require('../../package.json');
 const generateCommand = require('./commands/generate');
 const configCommand = require('./commands/config');
 const validateCommand = require('./commands/validate');
+const webCommand = require('./commands/web');
 
 /**
  * Initialize and configure the CLI
@@ -79,6 +80,13 @@ function registerCommands(program) {
         .option('--strict', 'Use strict validation rules')
         .action(validateCommand);
 
+    // Web command - Start web interface
+    program
+        .command('web')
+        .description('Start the web interface')
+        .option('-p, --port <port>', 'Port to run the server on', '3000')
+        .action(webCommand);
+
     // Add examples to help
     program.addHelpText('after', `
 
@@ -97,6 +105,10 @@ ${chalk.bold('Examples:')}
 
   ${chalk.gray('# Validate a specification')}
   $ specbaker validate specification.md
+
+  ${chalk.gray('# Start web interface')}
+  $ specbaker web
+  $ specbaker web --port 8080
 
 ${chalk.bold('Documentation:')}
   ${chalk.cyan('https://github.com/yourusername/specbaker#readme')}

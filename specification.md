@@ -17,369 +17,739 @@
 
 ## Table of Contents
 
-1. [userRoles](#userroles)
-2. [productSummary](#productsummary)
-3. [accessDeployment](#accessdeployment)
-4. [coreRequirements](#corerequirements)
-5. [importantDecisions](#importantdecisions)
+1. [accessDeployment](#accessdeployment)
+2. [userRoles](#userroles)
+3. [productSummary](#productsummary)
+4. [importantDecisions](#importantdecisions)
+5. [coreRequirements](#corerequirements)
 6. [userJourney](#userjourney)
 7. [dataModel](#datamodel)
-8. [uiScreens](#uiscreens)
-9. [testScenarios](#testscenarios)
-10. [bobPrompt](#bobprompt)
-11. [implementationPlan](#implementationplan)
+8. [testScenarios](#testscenarios)
+9. [uiScreens](#uiscreens)
+10. [implementationPlan](#implementationplan)
 
-## User Roles Specification – Coffee‑Store Management App
+## Access & Deployment Specification
 
-| Role | Primary / Secondary | Persona (Practical Description) | Permissions (What they **can** do) | Limitations (What they **cannot** do) | Core Responsibilities |
-|------|---------------------|--------------------------------|------------------------------------|---------------------------------------|------------------------|
-| **Owner** | Primary | **Alex the Owner** – the sole proprietor who makes all business decisions, monitors sales, and ensures the shop runs smoothly. Works from a desktop in the back‑office and from a tablet on the floor. | • Full **CRUD** (Create, Read, Update, Delete) on **Inventory**, **Products**, **Suppliers**, **Sales**, **Reports**, **Settings**.<br>• Manage **user accounts** (add, edit, deactivate).<br>• Export data (CSV, PDF).<br>• Configure **price rules**, **discounts**, and **tax settings**.<br>• Access **audit log**. | • No restrictions – has *all* system capabilities. | • Keep inventory data accurate in real‑time.<br>• Review daily/weekly sales reports.<br>• Approve purchase orders and supplier invoices.<br>• Set up and maintain system configuration. |
-| **Barista** | Secondary | **Sam the Barista** – prepares drinks, takes orders, and updates the stock of consumables (e.g., beans, milk) from a tablet at the service counter. | • **Read** inventory levels (real‑time).<br>• **Update** stock consumption for items used in orders (e.g., decrement beans, milk).<br>• **Create** sales orders (POS).<br>• View **product catalogue** and **price list**.<br>• Access **shift schedule** (if implemented). | • Cannot add or delete inventory items.<br>• No access to financial reports, settings, or user management.<br>• Cannot export data. | • Record each sale accurately.<br>• Log ingredient usage as orders are fulfilled.<br>• Notify Owner when an item falls below the reorder threshold (via in‑app alert). |
-| **Inventory Clerk** | Secondary | **Rita the Inventory Clerk** – monitors stock levels, receives deliveries, and creates purchase orders. Works from a desktop or tablet in the storeroom. | • **Read** full inventory list.<br>• **Create / Update** inventory receipts (add quantities on delivery).<br>• **Create** purchase orders to suppliers.<br>• View **low‑stock alerts**.<br>• Generate **inventory audit** reports (read‑only). | • Cannot modify product pricing or delete items.<br>• No access to sales entry or financial statements.<br>• Cannot manage user accounts. | • Keep inventory counts accurate after each delivery.<br>• Initiate re‑ordering when stock falls below defined thresholds.<br>• Perform periodic stock counts and reconcile discrepancies. |
-| **Accountant** | Secondary (optional) | **Mia the Accountant** – reviews financial performance, reconciles sales with bank deposits, and prepares tax reports. Primarily uses a desktop. | • **Read** sales data, revenue, and expense reports.<br>• Export financial data (CSV, PDF).<br>• View **tax settings** and **payment history**.<br>• Access **audit log** (read‑only). | • Cannot edit inventory, create sales, or manage users.<br>• No ability to change pricing or discounts. | • Generate profit‑and‑loss statements.<br>• Reconcile daily cash/card totals with POS data.<br>• Prepare tax filings and submit to authorities. |
-| **System Administrator** *(if multi‑owner or IT support is needed)* | Secondary / Support | **Taylor the SysAdmin** – responsible for the technical health of the web app (hosting, backups, security patches). | • Manage **system settings** (environment variables, API keys).<br>• Perform **database backups** and **restore**.<br>• View **audit logs** and **error logs**.<br>• Configure **role definitions** (create new roles). | • No business‑level permissions (cannot edit inventory, sales, or financial data unless also granted a business role). | • Ensure uptime, data integrity, and security compliance.<br>• Apply updates and monitor performance. |
-
-### Permissions Matrix (summary)
-
-| Permission | Owner | Barista | Inventory Clerk | Accountant | SysAdmin |
-|------------|-------|---------|-----------------|------------|----------|
-| View Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Edit Inventory (add/remove items) | ✅ | ❌ | ✅ (receipts only) | ❌ | ✅ (if role‑admin) |
-| Record Sales (POS) | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Create Purchase Orders | ✅ | ❌ | ✅ | ❌ | ❌ |
-| View Financial Reports | ✅ | ❌ | ❌ | ✅ | ✅ (read‑only) |
-| Export Data | ✅ | ❌ | ✅ (inventory) | ✅ | ✅ |
-| Manage Users / Roles | ✅ | ❌ | ❌ | ❌ | ✅ |
-| System Settings / Backups | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Audit Log Access | ✅ | ❌ | ✅ (own actions) | ✅ (read‑only) | ✅ |
+*Coffee‑store Management App – MVP (Inventory Management & Sales Tracking)*
 
 ---
 
-## Assumptions
+### 1. Access Model
 
-| # | Assumption |
-
-|---|------------|
-| A1 | The coffee‑store will have **only one owner** initially; additional owners can be added later via the user‑management screen. |
-| A2 | The app will be a **single‑tenant SaaS** (one store per deployment) rather than a multi‑tenant platform. |
-| A3 | Real‑time inventory updates are required **immediately after each sale** and **after each receipt** of stock. |
-| A4 | The Owner is also the **financial decision‑maker**, so the Accountant role is optional and can be omitted in the MVP. |
-| A5 | All users will authenticate via **email + password** (or SSO if later integrated). |
-| A6 | The app will be responsive and usable on **desktop browsers (≥1024 px)** and **tablet/phone browsers** (≥600 px). |
-| A7 | Notifications for low‑stock will be **in‑app alerts**; optional push/email notifications can be added later. |
-
-## Open Questions
-
-| # | Question |
-
-|---|----------|
-| Q1 | Will there ever be a need for **multiple barista stations** with separate POS terminals, and if so, should each station have its own login? |
-| Q2 | Should the **Inventory Clerk** be able to edit product details (e.g., unit of measure) or is that strictly Owner‑only? |
-| Q3 | Are there any **regulatory compliance** requirements (e.g., food‑safety logs) that need to be captured in the system? |
-| Q4 | Will the Owner ever delegate **partial administrative rights** (e.g., allow a manager to add users but not change pricing)? |
-| Q5 | What is the preferred **data export format** for accounting (CSV, Excel, PDF) and should it include a predefined template? |
-| Q6 | Is there a requirement for **offline mode** on tablets when the internet is down, with later sync? |
-
-## Remarks / Considerations
-
-- **Security:** All role‑based access must be enforced server‑side (e.g., using JWT claims or session roles) to prevent privilege escalation from the client.
-- **Scalability:** Even though the app is moderate in complexity, design the permission system using a **role‑based access control (RBAC)** table so new roles can be added without code changes.
-- **UX:** On tablets, the Barista view should present a **large “Add Sale” button** and a **quick‑select inventory decrement** UI to keep order entry fast.
-- **Audit Trail:** Every mutation (inventory change, sale, purchase order) should be logged with **user ID, timestamp, and before/after values** to satisfy potential audit requirements.
-- **Testing:** Include unit tests for each API endpoint verifying that users without the required role receive a **403 Forbidden** response.
-- **Future Extensibility:** Keep the role definitions in a **configurable database table** (e.g., `roles`, `role_permissions`) to allow the Owner to create custom roles (e.g., “Shift Supervisor”).
+| Aspect | Detail |
+|--------|--------|
+| **Primary access channel** | Web browser (responsive UI) – no native mobile or desktop clients in MVP. |
+| **Secondary access** | Public REST API (internal use only) for integration with Square POS and QuickBooks. |
+| **User login** | Email + password (minimum 8 characters, password expiration every 90 days). |
+| **Roles & permissions** | Owner (full), Manager (edit inventory, view sales), Barista (view inventory, create sales). |
+| **Session handling** | JWT stored in HttpOnly, Secure cookie; token lifetime 8 h, refresh token 30 days. |
 
 ---
 
-*This specification provides a concrete, implementation‑ready view of the user roles needed for the coffee‑store management app, together with the permissions, responsibilities, and the assumptions that guided the design.*
+### 2. Deployment Model
 
-## ☕ Coffee‑Store Management App – Product Summary
-
-### 1. Product Goal
-
-Create a **web‑based, responsive management console** that enables the coffee‑store owner to **track inventory in real time** from any desktop, tablet, or phone inside the store, giving full visibility and control over stock levels, low‑stock alerts, and inventory adjustments.
-
----
-
-### 2. Problem Being Solved
-
-* **Manual stock checks** are time‑consuming, error‑prone, and often out‑of‑date, leading to stock‑outs or over‑ordering.
-* The owner currently has **no single source of truth** for current inventory while moving between the POS, storage room, and the back‑office.
-* Lack of **mobile‑friendly access** forces the owner to rely on paper logs or separate desktop tools.
+| Item | Choice |
+|------|--------|
+| **Hosting** | Cloud‑based SaaS (e.g., AWS, Azure, GCP). |
+| **Infrastructure** | Containerised services (Docker) orchestrated by Kubernetes (or managed service like AWS ECS/Fargate). |
+| **Database** | Managed relational DB (Amazon RDS / Azure PostgreSQL) with automated daily backups. |
+| **CI/CD** | Git‑based pipeline (GitHub Actions / GitLab CI) deploying to separate dev, staging, and prod clusters. |
+| **Environment tiers** | Development (local Docker compose), Staging (full‑scale replica of prod, data masked), Production (live). |
+| **Scalability** | Horizontal pod autoscaling based on CPU/Memory; ability to handle peak‑hour traffic (≈50 concurrent baristas). |
+| **Disaster recovery** | Daily automated backups retained 7 years; point‑in‑time restore capability. |
 
 ---
 
-### 3. Target Users
+### 3. Runtime & Hosting Expectations
 
-| Role | Description | Permissions |
-|------|-------------|-------------|
-| **Owner** | Sole proprietor who runs day‑to‑day operations, orders supplies, and makes pricing decisions. | Full read/write access to all data and settings (inventory, suppliers, reports, user management). |
-
-*No other roles are required for the MVP.*
-
----
-
-### 4. Core Use Cases (MVP)
-
-| # | Use Case | Primary Actor | Trigger | Success Outcome |
-
-|---|----------|---------------|---------|-----------------|
-| 1 | **View current inventory** | Owner | Opens the dashboard on any device | A list of all SKUs with quantity on hand, unit of measure, and last updated timestamp is displayed instantly. |
-| 2 | **Update stock levels** (e.g., after a delivery or waste) | Owner | Clicks “Edit” on a SKU or uses a quick‑add form | New quantity is saved, the audit log records who changed what and when, and the UI reflects the change immediately. |
-| 3 | **Receive low‑stock alerts** | Owner | System detects quantity ≤ predefined threshold | A visual badge and optional push/notification appears on the dashboard, prompting re‑order. |
-| 4 | **Generate simple inventory report** | Owner | Selects a date range and clicks “Export” | A CSV/Excel file containing SKU, opening balance, receipts, usage, and closing balance is downloaded. |
-| 5 | **Access from any device** | Owner | Opens the app on desktop, tablet, or phone | UI adapts responsively; all functions work identically across screen sizes. |
-
-*Future extensions (outside MVP) may include sales tracking, supplier management, and multi‑user roles.*
+| Component | Runtime | OS / Platform |
+|-----------|---------|---------------|
+| **Web front‑end** | Node.js 20 (or later) + React 18 (or equivalent). | Linux containers (Ubuntu 22.04). |
+| **Back‑end API** | .NET 8 / Java 21 / Node.js 20 (choose one) – **assumption**: Node.js chosen for parity with front‑end. | Linux containers. |
+| **Background workers** (POS sync, QuickBooks export, low‑stock alerts) | Same runtime as API, executed as separate worker pods. |
+| **Message broker** (optional) | RabbitMQ / Amazon SQS – **assumption**: RabbitMQ for reliable queuing. |
+| **Cache** | Redis (managed) for session store & quick lookup of inventory levels. |
 
 ---
 
-### 5. Success Criteria (MVP)
+### 4. Platform & Browser Support
 
-| Metric | Target | Measurement Method |
-|--------|--------|--------------------|
-| **Real‑time inventory accuracy** | ≥ 95 % match with physical count after 1 week of use | Spot‑check audit of 10 random SKUs. |
-| **Device coverage** | 100 % of core use cases usable on desktop **and** mobile browsers | Usability test on Chrome (desktop) + Safari/Chrome (iOS/Android). |
-| **Owner satisfaction** | ≥ 4/5 on post‑launch survey | Survey after 30 days of operation. |
-| **Low‑stock alert reliability** | Alerts triggered within 5 seconds of threshold breach | Automated test simulating stock change. |
-| **Performance** | Page load ≤ 2 seconds on 3G network | Lighthouse performance audit. |
-
----
-
-### 6. Key Value Propositions
-
-| Benefit | How the App Delivers It |
-|---------|--------------------------|
-| **Instant visibility** | Real‑time dashboard eliminates guesswork. |
-| **Reduced waste & stock‑outs** | Automated low‑stock alerts prompt timely re‑orders. |
-| **Mobile flexibility** | Owner can check or adjust inventory while on the floor, without returning to a desktop. |
-| **Audit trail** | Every change is logged, supporting accountability and future analysis. |
-| **Simple, single‑pane interface** | No training overhead; the owner can start using it immediately. |
+| Platform | Minimum version |
+|----------|-----------------|
+| **Desktop browsers** | Chrome 108+, Edge 108+, Firefox 108+, Safari 15+. |
+| **Mobile browsers** | Chrome on Android 108+, Safari on iOS 15+. |
+| **Operating systems** | Any OS capable of running the above browsers (Windows 10+, macOS 12+, Linux, Android 9+, iOS 13+). |
+| **Responsive design** | UI must adapt to tablets and small‑screen phones (≥320 px width). |
+| **Accessibility** | WCAG 2.1 AA compliance (color contrast, keyboard navigation). |
 
 ---
 
-### 7. Scope Summary (MVP)
+### 5. Authentication & Access Control
 
-| Included | Excluded (Future) |
-|----------|-------------------|
-| • Responsive web UI (desktop + tablet/phone) <br>• SKU catalog (name, unit, threshold) <br>• Real‑time quantity display <br>• Inline edit / quick‑add forms <br>• Low‑stock alert UI (badge + optional browser notification) <br>• CSV/Excel export of inventory report <br>• Basic audit log (user, timestamp, change) <br>• Authentication (owner‑only) | • Multi‑user roles (barista, manager) <br>• Supplier portal & purchase order generation <br>• Integration with POS or accounting systems <br>• Advanced analytics (trend, forecast) <br>• Offline‑first capability <br>• Mobile app (native) |
+| Requirement | Detail |
+|-------------|--------|
+| **Identity provider** | Built‑in email/password store (hashed with Argon2id). Future SSO (OAuth2) can be added – **open question**. |
+| **Password policy** | Minimum 8 characters, at least one uppercase, one number, one special character; expiration every 90 days; password history of last 5. |
+| **Multi‑factor authentication** | Not required for MVP, but should be architected for easy addition later. |
+| **Role‑based access control (RBAC)** | Enforced at API layer; UI hides/ disables unauthorized actions. |
+| **Session timeout** | Inactive session expires after 30 minutes; automatic logout prompts. |
+| **Audit logging** | All CRUD actions on inventory and sales are logged with user ID, timestamp, and IP address. |
+
+---
+
+### 6. Network Requirements
+
+| Requirement | Specification |
+|-------------|----------------|
+| **Internet connectivity** | Required for all users; minimum 5 Mbps downstream for smooth UI. |
+| **API endpoints** | HTTPS only (TLS 1.2+). Public endpoint: `https://api.coffeestore.example.com`. |
+| **CORS** | Allow only the domain `https://app.coffeestore.example.com`. |
+| **Firewall** | Restrict inbound traffic to 443 (HTTPS) and 22 (SSH) from approved IP ranges for admin access. |
+| **Outbound** | Must be able to reach Square API (`https://connect.squareup.com`) and QuickBooks API (`https://quickbooks.api.intuit.com`). |
+| **Latency** | API response time ≤ 200 ms for typical CRUD operations under normal load. |
+
+---
+
+### 7. Environment Requirements
+
+| Environment | Purpose | Data handling |
+|-------------|---------|---------------|
+| **Development** | Local feature work; uses mock Square/QuickBooks services. | Synthetic data only; no production credentials. |
+| **Staging** | Pre‑production validation; mirrors production config. | Production‑like data masked or refreshed nightly. |
+| **Production** | Live coffee‑store operations. | Full data retention (7 years) and daily backups. |
+| **Configuration management** | Use environment variables or secret manager (AWS Secrets Manager / Azure Key Vault). |
+| **Logging & Monitoring** | Centralised log aggregation (ELK/Datadog) and health checks; alerts for low‑stock email notifications. |
 
 ---
 
 ### 8. Assumptions
 
-| # | Assumption |
-
-|---|------------|
-| A1 | The owner will be the **only** user of the system during the MVP phase. |
-| A2 | Inventory items are identified by a **unique SKU** that the owner can manually create/edit. |
-| A3 | The store has reliable Wi‑Fi; the app will be hosted on a cloud service reachable from the store’s network. |
-| A4 | “Real‑time” means **near‑instant** (sub‑second) UI updates after a change; no background batch processing is required. |
-| A5 | Low‑stock thresholds are set **per SKU** by the owner via the UI. |
-| A6 | Browser notifications are acceptable for alerts; no SMS or email integration is required initially. |
-| A7 | Data persistence will be handled by a relational database (e.g., PostgreSQL) with standard CRUD APIs. |
-| A8 | The owner will use a modern browser (Chrome, Safari, Edge) that supports ES6+ JavaScript and CSS Grid/Flexbox. |
+1. **Technology stack** – The team will adopt a JavaScript/Node.js stack for both front‑end and back‑end to minimise context switching. If another language is preferred, replace runtime details accordingly.
+2. **Square integration** – Square’s real‑time API provides endpoints for order creation, payment capture, and inventory updates; required credentials will be supplied.
+3. **QuickBooks export** – Daily export will be performed via QuickBooks Online API using a service account; CSV or JSON format is acceptable.
+4. **Low‑stock alerts** – Implemented as email notifications to the manager’s registered email address.
+5. **Backup retention** – Cloud provider’s managed backup service will be configured to retain snapshots for 7 years.
 
 ---
 
 ### 9. Open Questions
 
-| # | Question |
-
-|---|----------|
-| Q1 | **What is the expected maximum number of SKUs** (e.g., 100, 500, 2000)? This influences pagination and DB indexing decisions. |
-| Q2 | **Should the low‑stock alert be push‑only, or also send email/SMS?** |
-| Q3 | **Is there an existing POS system** that we need to import initial inventory data from, or will the owner start from a blank slate? |
-| Q4 | **What level of data backup / retention** is required (e.g., keep audit logs for 1 year)? |
-| Q5 | **Will the owner need role‑based access for future employees** (e.g., barista view)? If so, what permissions are anticipated? |
-| Q6 | **Do we need to comply with any specific data‑privacy regulations** (e.g., GDPR) for inventory data? |
+| Question | Impact |
+|----------|--------|
+| Will the owner require SSO (e.g., Google, Azure AD) in the near future? | Affects authentication architecture and potential integration effort. |
+| Are there any corporate firewalls or proxy requirements that could restrict outbound API calls to Square/QuickBooks? | May necessitate additional network configuration or whitelisting. |
+| What is the expected maximum concurrent user count (peak baristas) for capacity planning? | Influences autoscaling thresholds and instance sizing. |
+| Should the system support offline operation (e.g., barista continues to take orders if internet drops) with later sync? | Would add complexity (local storage, conflict resolution). |
+| Is there a preferred email service (SendGrid, SES, etc.) for low‑stock alerts and other notifications? | Determines integration point for notification subsystem. |
 
 ---
 
-### 10. Remarks (Technical / UX / Business Considerations)
+### 10. Remarks
 
-* **Performance:** Use WebSockets or long‑polling only if future real‑time sync with external systems is planned; otherwise, simple RESTful calls with optimistic UI updates are sufficient.
-* **Security:** Even though only the owner uses the app, enforce HTTPS, secure password storage (bcrypt), and CSRF protection.
-* **Scalability:** Design the API to be stateless; containerize the backend (Docker) to allow easy horizontal scaling if the store expands to multiple locations.
-* **UX:** Keep the dashboard uncluttered—primary focus on inventory list, search/filter, and a prominent “Add / Adjust Stock” button. Use large touch targets for tablet/phone use.
-* **Testing:** Include unit tests for inventory calculations and end‑to‑end tests (Cypress or Playwright) covering the core use cases on both desktop and mobile viewports.
-* **Deployment:** Target a PaaS (e.g., Vercel, Netlify for front‑end; Render or Railway for API) to simplify CI/CD and reduce ops overhead.
+- **Security**: All data in transit must be encrypted (TLS 1.2+). At rest encryption is handled by the managed DB service.
+- **Scalability**: Design for stateless API servers; session data stored in Redis to allow horizontal scaling.
+- **Compliance**: Retaining sales data for 7 years satisfies typical tax regulations; ensure GDPR/CCPA considerations for personal data (e.g., employee emails).
+- **Testing**: Include end‑to‑end tests that simulate a full order flow (Barista → app → Square → record → QuickBooks export).
+- **Documentation**: Provide API spec (OpenAPI 3.0) for internal services and integration points.
 
 ---
 
-**Next Steps**
-1. Resolve Open Questions (especially Q1 & Q3) with the owner.
-2. Draft UI wireframes for the dashboard and edit forms.
-3. Define API contract (endpoints, request/response schemas).
-4. Set up project repository, CI pipeline, and initial data model.
+*Prepared for the development team to guide implementation, infrastructure provisioning, and testing of the MVP Access & Deployment aspects.*
 
-*Once the above are approved, development can proceed directly to MVP implementation.*
+## User Roles Specification – Coffee‑Store Management App (MVP)
 
-## Access & Deployment
+| **Role** | **Primary / Secondary** | **Typical Persona** | **Core Permissions** | **Key Responsibilities** | **Limitations / Restrictions** |
+|----------|--------------------------|---------------------|----------------------|---------------------------|---------------------------------|
+| **Owner** | Primary (admin) | *Alex – the coffee‑shop owner*<br>Owns the business, makes strategic decisions, reviews financials weekly. | • Full **read/write** access to **Inventory**, **Sales**, **User Management**, **System Settings**.<br>• Can **configure** Square POS integration and QuickBooks export.<br>• Can **view audit logs** and **manage backups**.<br>• Can **create / delete** user accounts and assign roles. | • Approve major changes (e.g., price updates, supplier changes).<br>• Review low‑stock alerts and reorder decisions.<br>• Oversee daily export to QuickBooks and ensure compliance with tax‑record retention. | • Must not use the app for direct order entry (optional – can be disabled).<br>• No direct POS transaction handling; relies on Square for payment processing. |
+| **Manager** | Primary | *Sam – Store manager*<br>Manages day‑to‑day operations, supervises baristas, handles inventory replenishment. | • **Read** inventory levels.<br>• **Create / edit** inventory items (add new stock, adjust quantities after manager approval).<br>• **View** all sales transactions and generate sales/tax reports.<br>• Receive **low‑stock alerts**.<br>• Approve barista‑submitted stock receipts. | • Review and approve inventory updates submitted by baristas.<br>• Monitor sales performance and tax calculations.<br>• Trigger re‑order actions when thresholds are hit.<br>• Ensure daily QuickBooks export runs successfully. | • Cannot delete user accounts.<br>• Cannot change system‑wide integration settings (Square API keys, backup schedule). |
+| **Barista** | Primary | *Riley – Barista*<br>Prepares drinks, takes orders, records incoming stock deliveries. | • **View** inventory levels (read‑only).<br>• **Enter** new sales orders (item, qty, price) – the app sends the order to Square for payment.<br>• **Submit** stock‑receipt entries for manager approval.<br>• View own sales history. | • Capture each customer order in the app; ensure payment is processed via Square.<br>• Record received stock (e.g., coffee beans, milk) and send for manager approval.<br>• Verify inventory visibility to avoid selling out‑of‑stock items. | • Cannot edit inventory quantities directly.<br>• Cannot view or export sales data beyond own transactions.<br>• No access to system settings or user management. |
+| **Accountant** *(optional – secondary)* | Secondary | *Jordan – External accountant*<br>Handles bookkeeping, tax filing, and financial reconciliation. | • **Read‑only** access to **Sales** and **Inventory** data.<br>• Ability to **download** daily QuickBooks export files.<br>• View **tax reports**. | • Reconcile daily sales with QuickBooks.<br>• Prepare periodic tax filings using the generated reports. | • No ability to modify inventory or sales records.<br>• No access to user management or system configuration. |
+| **System Administrator** *(optional – secondary)* | Secondary | *Taylor – IT admin*<br>Responsible for infrastructure, backups, and security compliance. | • **Read/write** access to **System Settings**, **Backup Management**, **API credentials**.<br>• View **audit logs**.<br>• Can **reset passwords** and enforce password‑expiration policy. | • Configure daily backup jobs and verify restore procedures.<br>• Manage Square and QuickBooks API keys securely.<br>• Monitor authentication logs for suspicious activity. | • No access to business‑level data (inventory, sales) unless explicitly granted.<br>• Cannot approve inventory changes or view sales reports. |
 
-### 1. How users will access the application
+### Permissions Matrix (MVP)
 
-| Access Method | Description | Reasoning |
-|---------------|-------------|-----------|
-| **Web browser** (responsive UI) | The owner will open the app in a modern browser on a desktop, tablet, or phone. No native client is required. | Matches the “desktop and tablet/phone” requirement and keeps the solution simple. |
-| **RESTful API (optional)** | Expose a thin JSON API for possible future integrations (e.g., POS, accounting software). | Not required for the MVP but useful for extensibility. |
-| **Admin console (internal tool)** | Same web UI, but with a hidden “admin” route that only the owner can reach. | Provides a single point of entry for all management tasks. |
+| Permission | Owner | Manager | Barista | Accountant | Sys‑Admin |
+|------------|-------|---------|---------|------------|-----------|
+| **View Inventory** | ✅ | ✅ | ✅ (read‑only) | ✅ | ✅ |
+| **Edit Inventory** | ✅ | ✅ (after approval) | ❌ | ❌ | ✅ (system config) |
+| **Approve Stock Receipts** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Enter Sales Order** | ❌ (optional) | ✅ (optional) | ✅ | ❌ | ❌ |
+| **View All Sales** | ✅ | ✅ | ❌ (own only) | ✅ | ✅ |
+| **Export to QuickBooks** | ✅ | ✅ | ❌ | ✅ (download) | ✅ |
+| **Configure POS Integration** | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **User Management** | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **System Settings / Backup** | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **Audit Log Access** | ✅ | ✅ | ❌ | ❌ | ✅ |
+| **Password Reset / Policy Enforcement** | ✅ | ✅ (self‑service) | ✅ (self‑service) | ✅ (self‑service) | ✅ |
 
-### 2. Deployment model
+### Role‑Based Limitations
 
-| Aspect | Decision (MVP) | Rationale |
-|--------|----------------|-----------|
-| **Model** | **Cloud‑hosted SaaS** (single‑tenant or multi‑tenant, TBD) | Guarantees availability on any device without local installation and simplifies updates. |
-| **Hosting provider** | Assumption: **AWS** (Elastic Beanstalk / ECS / Lambda) or **Azure App Service** – whichever the team prefers. | Both provide managed HTTPS, auto‑scaling, and CI/CD pipelines. |
-| **Runtime** | Node.js ≥ 18 (or equivalent .NET 6+, Python 3.11) + a relational DB (PostgreSQL/MySQL). | Modern, widely‑supported, and fits the moderate complexity of inventory tracking. |
-| **Containerisation** | Optional Docker image for reproducible builds. | Helpful for local development and future scaling. |
+* **Barista** – cannot change any data that would affect inventory balances without manager approval.
+* **Manager** – cannot alter integration credentials or backup schedules; must request Owner or Sys‑Admin for such changes.
+* **Accountant** – read‑only; cannot affect operational data.
+* **Sys‑Admin** – isolated from business data to enforce separation of duties (principle of least privilege).
 
-### 3. Runtime & Hosting Expectations
-
-| Requirement | Detail |
-|-------------|--------|
-| **HTTPS only** | All traffic must be encrypted (TLS 1.2+). |
-| **Auto‑scaling** | Ability to handle occasional spikes (e.g., morning rush) without manual intervention. |
-| **Zero‑downtime deployments** | Use rolling updates or blue‑green deployments. |
-| **Backup & recovery** | Daily automated DB backups retained ≥ 30 days. |
-| **Logging & monitoring** | Centralised logs (e.g., CloudWatch, Azure Monitor) and health‑check endpoint (`/health`). |
-
-### 4. Technical Requirements
-
-| Layer | Requirement |
-|-------|-------------|
-| **Front‑end** | - HTML5, CSS3, JavaScript (ES2022). <br> - Framework: React 18 (or Vue 3 / Svelte) with responsive design (Flexbox/Grid). |
-| **Back‑end** | - REST API (JSON). <br> - Authentication via JWT or session cookie. <br> - Business logic for real‑time inventory updates. |
-| **Database** | - PostgreSQL 13+ (or MySQL 8+). <br> - Simple schema: `products`, `inventory_movements`, `users`. |
-| **CI/CD** | - Git‑based pipeline (GitHub Actions / Azure Pipelines). <br> - Linting, unit tests, integration tests, and automated deployment to staging → production. |
-| **Version control** | Git repository with `main`, `dev`, and feature branches. |
-| **Testing** | - Unit tests (Jest / Mocha). <br> - End‑to‑end tests (Cypress) covering core inventory flows. |
-
-### 5. Platform Support
-
-| Platform | Minimum version / requirement |
-|----------|------------------------------|
-| **Desktop browsers** | Chrome 90+, Edge 90+, Firefox 88+, Safari 14+. |
-| **Mobile browsers** | Chrome for Android 90+, Safari iOS 14+. |
-| **Operating systems** | Windows 10+, macOS 10.15+, iOS 13+, Android 9+. |
-| **Screen sizes** | Responsive layout from 320 px (phone) to 1920 px (desktop). |
-
-### 6. Browser & Device Compatibility
-
-- Use **progressive enhancement**: core functionality works on all supported browsers; advanced UI features (e.g., drag‑and‑drop) degrade gracefully.
-- Test matrix: at least one modern browser per OS (Chrome, Safari, Edge).
-- No reliance on proprietary plugins (e.g., Flash).
-
-### 7. Authentication & Access Control
-
-| Feature | Detail |
-|---------|--------|
-| **User type** | Single role: **Owner** (full control). |
-| **Login method** | Email + password (minimum 8 characters, bcrypt‑hashed). |
-| **Session** | Short‑lived JWT (15 min) + refresh token (7 days) **or** server‑side session cookie with SameSite = Strict. |
-| **MFA** | **Assumption:** optional TOTP (Google Authenticator) – can be added later. |
-| **Authorization** | Role‑based middleware that blocks any request not from an authenticated Owner. |
-| **Password reset** | Secure token emailed to the owner’s address. |
-| **Audit log** | Record every inventory change with timestamp and user ID. |
-
-### 8. Network Requirements
-
-| Requirement | Detail |
-|-------------|--------|
-| **Internet connectivity** | Required for all operations (cloud‑hosted). |
-| **Latency** | UI should feel responsive; API response ≤ 200 ms under normal load. |
-| **Offline mode** | **Open Question:** Is offline inventory entry needed? If yes, consider Service Workers & IndexedDB. |
-| **Firewall** | Allow outbound HTTPS (443) from client devices; inbound HTTPS to the hosting VPC. |
-
-### 9. Environment Requirements
-
-| Environment | Purpose | Key Characteristics |
-|-------------|---------|----------------------|
-| **Development** | Local coding & unit testing. | Docker compose or local Node/Python runtime; mock DB or local PostgreSQL. |
-| **Staging** | Pre‑production validation. | Mirrors production config (same DB engine, TLS). Auto‑deployed from `dev` branch. |
-| **Production** | Live store usage. | High‑availability setup, autoscaling, backups, monitoring. |
-| **Feature flags** | Enable/disable experimental UI components without redeploy. | Managed via environment variables or a simple DB table. |
-
-### 10. Assumptions
+### Assumptions
 
 | # | Assumption |
 
 |---|------------|
-| 1 | The owner will be the **only** user of the system (no staff or customers). |
-| 2 | Real‑time inventory updates are performed **manually** by the owner via the UI (no barcode scanner integration required for MVP). |
-| 3 | The app will be hosted on a public cloud provider (AWS, Azure, or GCP). |
-| 4 | Data residency is not a regulatory concern (any region is acceptable). |
-| 5 | No offline‑first capability is required for the initial release. |
-| 6 | The owner will have a stable internet connection in the store. |
-| 7 | Security compliance requirements are limited to standard OWASP Top 10 mitigations. |
+| A1 | The **Owner** will also act as the primary **System Administrator** unless a dedicated IT admin is hired later. |
+| A2 | **Baristas** will have a unique employee ID that is stored in the user profile and used for sales attribution. |
+| A3 | The **low‑stock alert** is delivered via email to the Manager (and optionally Owner) – the notification channel is pre‑defined. |
+| A4 | **QuickBooks** export is a daily CSV/JSON file placed in a secure S3‑like bucket; the Accountant downloads it manually. |
+| A5 | Password expiration is enforced every **90 days** (configurable by Owner). |
+| A6 | All roles authenticate via the same **email + password** mechanism; no SSO is required for the MVP. |
+| A7 | Inventory adjustments submitted by Baristas are stored as **pending** records until Manager approval. |
 
-### 11. Open Questions
+### Open Questions
 
 | # | Question |
 
 |---|----------|
-| 1 | **Hosting provider preference** – AWS, Azure, GCP, or another? |
-| 2 | **Data storage location** – any specific region or compliance (e.g., GDPR) needed? |
-| 3 | **Multi‑tenant vs. single‑tenant** – Will the same codebase serve multiple coffee‑store owners in the future? |
-| 4 | **Backup retention policy** – Desired RPO/RTO? |
-| 5 | **MFA requirement** – Must two‑factor authentication be mandatory at launch? |
-| 6 | **Integration needs** – Will the app ever need to push data to external POS or accounting systems? |
-| 7 | **Performance SLAs** – Expected maximum concurrent users (likely 1‑2, but confirm). |
-| 8 | **Offline support** – Should the owner be able to record inventory changes when the internet is down? |
-| 9 | **Custom domain** – Will the owner use a branded domain (e.g., `inventory.mycoffeestore.com`)? |
-|10| **Logging retention** – How long should application logs be kept? |
+| Q1 | Will there be **multiple managers** with the same permissions, or a hierarchy (e.g., senior vs. junior manager)? |
+| Q2 | Should the **Accountant** have the ability to trigger a manual QuickBooks export, or is the daily automated export sufficient? |
+| Q3 | Are there any **shift‑based access rules** (e.g., barista can only view inventory during their scheduled shift)? |
+| Q4 | Is there a need for **role‑specific dashboards** (e.g., manager dashboard with low‑stock widgets)? |
+| Q5 | What is the preferred **notification method** for low‑stock alerts (email, SMS, in‑app)? |
+| Q6 | Should the **System Administrator** be able to view sales data for troubleshooting, or must that be strictly prohibited? |
 
-### 12. Remarks
+### Remarks / Considerations
 
-- **Security:** Even with a single user, enforce strong password policies, rate‑limit login attempts, and store passwords with a modern hashing algorithm (bcrypt/argon2).
-- **Scalability:** Although the current load is low, using a cloud platform with auto‑scaling ensures the app can handle future growth (e.g., adding staff users).
-- **UX:** Responsive design must prioritize touch targets on tablets/phones (minimum 44 × 44 dp).
-- **Compliance:** If the owner later expands to multiple stores or hires employees, revisit role‑based access control and data‑privacy considerations.
-- **Testing:** Include automated UI tests that simulate inventory updates on both desktop and mobile viewports.
+* **Security** – Store passwords using a strong hashing algorithm (bcrypt/argon2). Enforce the 8‑character minimum and expiration policy.
+* **Audit Trail** – Every inventory change (submission, approval, edit) and sales transaction must be logged with user ID, timestamp, and before/after values.
+* **Scalability** – Design the role‑based access control (RBAC) using a flexible policy engine (e.g., Casbin) to allow future addition of roles (e.g., Shift Supervisor).
+* **Compliance** – Retain all sales and inventory records for **7 years** as per the retention policy; ensure backups are encrypted and stored off‑site.
+* **Integration** – The POS (Square) and accounting (QuickBooks) APIs must be called using service‑account credentials stored in a vault; only Owner/Sys‑Admin can rotate these secrets.
+* **User Experience** – Barista UI should hide any edit buttons for inventory; manager UI should clearly indicate pending stock receipts awaiting approval.
 
 ---
 
-*This Access & Deployment specification provides a concrete, testable foundation for the development team to build the coffee‑store management app while highlighting assumptions, open questions, and key considerations.*
+*This specification provides a concrete, implementation‑ready view of the user roles required for the MVP of the coffee‑store management web app. Adjustments can be made once the open questions are answered.*
 
-# Core Requirements – Coffee‑Store Management App
+# ☕ Coffee Store Management App – Product Summary (MVP)
 
-> **Goal:** Provide the store owner with a web‑based system that tracks coffee‑shop inventory in real time, accessible from desktop browsers and tablets/phones used on‑site.
+---
+
+## 1. Product Goal
+
+Create a **web‑only** management platform that lets a coffee shop **track inventory** and **record sales** in real‑time, while seamlessly integrating with the existing **Square POS** and automatically exporting daily sales data to **QuickBooks**. The system must enforce role‑based permissions, send low‑stock alerts, calculate local sales tax, and retain data for 7 years with daily backups.
+
+---
+
+## 2. Problem Being Solved
+
+- **Manual inventory updates** cause stock‑outs or over‑ordering.
+- **Separate POS and bookkeeping systems** force duplicate data entry and increase errors.
+- **No automated alerts** for low inventory, leading to lost sales.
+- **Inconsistent tax calculations** and lack of ready‑to‑file tax reports.
+
+The app centralises these processes, reduces manual work, and improves data accuracy for better operational decisions.
+
+---
+
+## 3. Target Users
+
+| Role | Primary Activities (MVP) |
+|------|--------------------------|
+| **Barista** | View current inventory levels, enter orders, trigger payment via Square, view own sales history. |
+| **Manager** | Approve new stock arrivals, edit inventory quantities, view all sales data, receive low‑stock alerts, generate tax reports. |
+| **Owner** | Full read/write access to inventory, sales, user management, and system settings. |
+
+---
+
+## 4. Core Use Cases
+
+| # | Use Case | Actor | Success Flow |
+
+|---|----------|-------|--------------|
+| 1 | **Record Stock Arrival** | Barista → Manager | Barista creates a *stock‑receipt draft* (product, qty, supplier). Manager reviews and approves → system updates `current_quantity`. |
+| 2 | **Low‑Stock Notification** | System (automated) | When `current_quantity` ≤ `reorder_threshold`, an email (or in‑app) alert is sent to all Managers. |
+| 3 | **Take a Sale** | Barista | Barista selects items, quantities → app sends order to Square API → Square processes payment → POS returns confirmation → app records transaction with tax, barista ID, timestamp. |
+| 4 | **Export Sales to QuickBooks** | System (nightly job) | At 02:00 AM each day, all sales from the previous day are transformed into QuickBooks‑compatible CSV/JSON and uploaded via QuickBooks API. |
+| 5 | **View Tax Report** | Manager | Manager selects a date range → system aggregates taxable sales, tax collected, and produces a downloadable PDF/CSV report. |
+| 6 | **User Authentication** | Any user | Email + password (≥8 chars, expires per policy) → JWT session token returned for subsequent API calls. |
+| 7 | **Data Retention & Backup** | System (scheduled) | Daily backup of the entire database to secure storage; data retained for 7 years, older data purged automatically. |
+
+---
+
+## 5. Success Criteria (MVP)
+
+| Metric | Target |
+|--------|--------|
+| **Availability** | 99.5 % uptime for the web app (excluding scheduled backups). |
+| **Order Processing Latency** | ≤ 2 seconds from order entry to payment confirmation. |
+| **Inventory Accuracy** | < 2 % variance between physical count and system after weekly audit. |
+| **Export Reliability** | ≥ 99 % of daily sales successfully imported into QuickBooks (no manual re‑entry). |
+| **Alert Delivery** | 100 % of low‑stock alerts delivered within 5 minutes of threshold breach. |
+| **Security** | All passwords stored with bcrypt (or Argon2) + password expiration enforced. |
+| **Compliance** | Sales and inventory data retained for 7 years; daily backups verified. |
+
+---
+
+## 6. Key Value Propositions
+
+| Benefit | How the App Delivers It |
+|---------|--------------------------|
+| **Real‑time inventory visibility** | Immediate updates after manager approval; low‑stock alerts prevent stock‑outs. |
+| **Zero duplicate entry** | Orders entered once in the app, automatically sent to Square and recorded. |
+| **Automated bookkeeping** | Daily export to QuickBooks removes manual sales‑to‑accounting steps. |
+| **Accurate tax handling** | Built‑in tax calculation and ready‑to‑file reports. |
+| **Role‑based security** | Fine‑grained permissions protect sensitive data and limit actions per role. |
+| **Data durability** | Daily backups and 7‑year retention meet audit and regulatory needs. |
+
+---
+
+## 7. Scope Summary (MVP)
+
+| Included | Excluded (Future Phases) |
+|----------|---------------------------|
+| • Web‑only UI (responsive) <br>• Inventory CRUD (Barista view, Manager edit) <br>• Sales entry & automatic Square payment <br>• Low‑stock email/in‑app alerts <br>• Tax calculation per transaction <br>• Periodic tax report generation <br>• Daily export to QuickBooks <br>• Email + password authentication with password policy <br>• Role‑based access (Barista, Manager, Owner) <br>• Data retention (7 years) & daily backups | • Native iOS/Android apps <br>• Integration with other POS systems <br>• Advanced analytics/dashboard (e.g., predictive ordering) <br>• Loyalty / rewards program <br>• Multi‑store support <br>• Third‑party tax services (e.g., Avalara) <br>• SSO / social login <br>• Real‑time push notifications (mobile) |
+
+---
+
+## 8. Assumptions
+
+| # | Assumption |
+
+|---|------------|
+| A1 | Square provides a **RESTful real‑time API** for order creation and payment capture, with OAuth credentials already provisioned. |
+| A2 | QuickBooks Online API is used for **daily CSV/JSON import**, and the required OAuth tokens are available. |
+| A3 | Low‑stock alerts will be sent via **email** to a predefined manager distribution list (SMTP credentials supplied). |
+| A4 | The local sales tax rate is **fixed** (e.g., 8 %) and does not change during the MVP period. |
+| A5 | The web app will be hosted on a **cloud VM** (e.g., AWS EC2) with a managed PostgreSQL database; backups are stored in the same cloud provider’s object storage. |
+| A6 | Password expiration policy is **90 days** with a mandatory reset email workflow (implementation of reset UI is in‑scope). |
+| A7 | All users have a **unique corporate email address** that serves as the login identifier. |
+| A8 | The system clock is synchronized to UTC; timestamps are stored in UTC and displayed in the shop’s local timezone. |
+
+---
+
+## 9. Open Questions
+
+| # | Question |
+
+|---|----------|
+| Q1 | What **email service** (SMTP provider, API key) will be used for low‑stock alerts and password‑reset emails? |
+| Q2 | What **exact tax rules** (e.g., tax‑exempt items, tax‑included pricing) need to be supported beyond a flat rate? |
+| Q3 | Should the **export to QuickBooks** be a CSV upload via the UI or an automated API push? |
+| Q4 | What is the preferred **format** for the tax report (PDF, CSV, both)? |
+| Q5 | Are there any **branding** requirements (logo, colour palette) for the web UI? |
+| Q6 | How many **concurrent users** are expected at peak times (to size the server)? |
+| Q7 | Will the manager receive alerts only via email, or also via **SMS/Slack**? |
+| Q8 | What is the **retention schedule** for backups (e.g., keep daily for 30 days, weekly for 6 months, monthly for 7 years)? |
+
+---
+
+## 10. Remarks / Technical Considerations
+
+| # | Remark |
+
+|---|--------|
+| R1 | **Square Integration** – Use Square’s *Orders API* to create an order, then *Payments API* to capture payment. Ensure idempotency keys to avoid duplicate charges on retries. |
+| R2 | **QuickBooks Integration** – Prefer the *QuickBooks Online API* (v3) for direct transaction import; fallback to CSV upload if API limits are hit. |
+| R3 | **Security** – Store passwords with **bcrypt (cost factor ≥12)** or Argon2. Enforce HTTPS everywhere (TLS 1.2+). |
+| R4 | **Audit Trail** – Record every inventory change (who, when, before/after values) for compliance. |
+| R5 | **Scalability** – Design the API as stateless micro‑services (or modular monolith) to allow horizontal scaling later. |
+| R6 | **Testing** – Include unit tests for tax calculation, integration tests with Square sandbox, and end‑to‑end tests for the daily QuickBooks export job. |
+| R7 | **Backup Strategy** – Use point‑in‑time snapshots and retain at least **2 copies** in different availability zones. |
+| R8 | **Performance** – Cache static reference data (e.g., product list, tax rate) in memory (Redis) to keep order entry latency low. |
+| R9 | **Accessibility** – Follow WCAG 2.1 AA guidelines for the web UI (keyboard navigation, contrast). |
+| R10 | **Localization** – MVP assumes a single language (English); future releases may need multi‑language support. |
+
+---
+
+*Prepared by the Systems Analyst – 16 May 2026*
+
+## Important Decisions – Coffee‑Store Management App (MVP)
+
+| # | Decision | Status |
+
+|---|----------|--------|
+| 1 | Platform & Delivery Model | ✅ Confirmed |
+| 2 | Front‑end Framework & Language | ✅ Confirmed |
+| 3 | Back‑end Framework & Language | ✅ Confirmed |
+| 4 | Data Store (DB) | ✅ Confirmed |
+| 5 | Integration with Square POS | ✅ Confirmed |
+| 6 | Integration with QuickBooks Online | ✅ Confirmed |
+| 7 | Authentication & Session Management | ✅ Confirmed |
+| 8 | Authorization Model (RBAC) | ✅ Confirmed |
+| 9 | Inventory Update Workflow | ✅ Confirmed |
+|10 | Low‑Stock Notification Mechanism | ✅ Confirmed |
+|11 | Tax Calculation & Reporting | ✅ Confirmed |
+|12 | Data Retention & Backup Strategy | ✅ Confirmed |
+|13 | Deployment & Hosting Architecture | ✅ Confirmed |
+|14 | Scalability & Performance Approach | ✅ Confirmed |
+|15 | Security Controls (OWASP, Encryption, etc.) | ✅ Confirmed |
+|16 | Testing Strategy | ✅ Confirmed |
+|17 | Open Questions / Pending Decisions | ⏳ Open |
+
+Below each decision is a concise record that explains **what**, **why**, **how**, and the **implications** for the MVP.
+
+---
+
+### Decision 1 – Platform & Delivery Model
+
+**Choice:** Web‑only application delivered as a Single‑Page Application (SPA) running in modern browsers.
+
+**Rationale:**
+* The stakeholder explicitly wants “Web browser only (recommended)”.
+* A SPA provides a responsive, app‑like experience for baristas and managers on desktop or tablet devices used behind the counter.
+
+**Technology:**
+* Front‑end compiled to static assets (HTML/JS/CSS) served via CDN.
+
+**Trade‑offs:**
+* No native mobile features (push notifications, offline mode) – acceptable for MVP.
+* Requires reliable network connectivity in the store; fallback UI for brief outages will be added later.
+
+**Implications:**
+* All business logic lives on the server (API) – easier to enforce security and data integrity.
+
+---
+
+### Decision 2 – Front‑end Framework & Language
+
+**Choice:** **React** with **TypeScript**, using **React Router** for navigation and **React Query** for data fetching/caching.
+
+**Rationale:**
+* Large ecosystem, mature component libraries, and strong TypeScript support.
+* Enables rapid UI development and easy integration with Square’s JavaScript SDK (for POS order entry).
+
+**Trade‑offs:**
+* Slightly steeper learning curve for developers unfamiliar with React hooks.
+* Alternative (Vue/Angular) would also work, but React aligns with existing in‑house skill set (assumed).
+
+**Design Patterns:**
+* Component‑Based UI, Container‑Presentational pattern, and **Feature‑Sliced** folder structure for maintainability.
+
+---
+
+### Decision 3 – Back‑end Framework & Language
+
+**Choice:** **Node.js** (v20) with **NestJS** (TypeScript) as the API server.
+
+**Rationale:**
+* Same language (TypeScript) across front‑ and back‑end reduces context switching.
+* NestJS provides a modular, opinionated architecture (controllers, services, providers) that fits well with RBAC, integration adapters, and background jobs.
+
+**Trade‑offs:**
+* Not as “batteries‑included” as Django/Rails for admin UI, but Nest’s CLI and Swagger generation cover most needs.
+
+**Design Patterns:**
+* **CQRS** (Command‑Query Responsibility Segregation) for write‑heavy sales recording vs. read‑heavy inventory dashboards.
+* **Adapter** pattern for Square and QuickBooks integrations.
+
+---
+
+### Decision 4 – Data Store (DB)
+
+**Choice:** **PostgreSQL** (v15) as the primary relational database.
+
+**Rationale:**
+* Strong ACID guarantees needed for inventory counts and financial transactions.
+* Native support for JSONB if we later need flexible fields (e.g., supplier metadata).
+
+**Schema Highlights (MVP):**
+
+| Table | Key Columns |
+|-------|-------------|
+| `users` | id, email, password_hash, role, password_last_changed |
+| `inventory_items` | id, name, sku, unit_price, supplier, quantity, reorder_threshold, created_at, updated_at |
+| `inventory_adjustments` | id, item_id, delta, reason, created_by (barista), approved_by (manager), approved_at |
+| `sales` | id, timestamp, barista_id, total_amount, tax_amount, payment_method, square_transaction_id |
+| `sale_items` | id, sale_id, item_id, quantity, unit_price |
+| `low_stock_notifications` | id, item_id, sent_at, manager_id |
+
+**Trade‑offs:**
+* Relational model may be over‑engineered for a single‑store MVP, but it future‑proofs multi‑store expansion.
+
+**Scalability:**
+* Read replicas can be added later for reporting dashboards; write load is modest for a single store.
+
+---
+
+### Decision 5 – Integration with Square POS
+
+**Choice:** Use **Square SDK (Node.js)** and the **Square Orders API** for real‑time order creation, and **Square Payments API** for payment capture.
+
+**Rationale:**
+* Stakeholder confirmed Square provides a real‑time API.
+* SDK abstracts OAuth, request signing, and error handling.
+
+**Implementation Sketch:**
+
+1. Barista selects items → front‑end POST `/api/orders` (creates a Square order).
+2. API returns a `checkout_url` or triggers Square’s in‑store payment flow.
+3. Upon successful payment, Square webhook notifies our API → we record the sale transaction.
+
+**Trade‑offs:**
+* Dependency on Square’s availability; need retry/back‑off logic for webhook failures.
+
+**Open Question:**
+* Will the store use Square hardware (terminal) or only the API? (Assumed hardware is present.)
+
+---
+
+### Decision 6 – Integration with QuickBooks Online
+
+**Choice:** Use **QuickBooks Online REST API** via the **Intuit SDK** (Node.js).
+
+**Rationale:**
+* Requirement: “export daily to QuickBooks”.
+* The SDK handles OAuth2 token refresh and provides endpoints for creating invoices/transactions.
+
+**Process:**
+
+* A nightly background job (Cron) extracts the day’s sales from PostgreSQL, aggregates them, and creates a **Sales Receipt** in QuickBooks.
+
+**Trade‑offs:**
+* Rate limits (≈ 1000 calls/day) – aggregation reduces calls.
+* Requires secure storage of OAuth credentials.
+
+**Assumption:** The business uses QuickBooks Online (not Desktop).
+
+---
+
+### Decision 7 – Authentication & Session Management
+
+**Choice:** **Email + Password** login, **JWT** (access token 15 min, refresh token 7 days) stored in **HttpOnly Secure SameSite=Strict** cookies.
+
+**Password Policy:** Minimum 8 characters, must include at least one number or special character, password expiration every 90 days.
+
+**Rationale:**
+* Aligns with stakeholder’s security answer.
+* JWT enables stateless API calls, simplifying horizontal scaling.
+
+**Security Controls:**
+
+* Passwords hashed with **bcrypt (cost factor 12)**.
+* Brute‑force protection via rate limiting (e.g., 5 attempts per IP per 15 min).
+* MFA is **out of scope** for MVP but flagged for future work.
+
+---
+
+### Decision 8 – Authorization Model (RBAC)
+
+**Roles & Permissions (MVP):**
+
+| Role | View Inventory | Edit Inventory | View Sales | Edit Sales | Manage Users |
+|------|----------------|----------------|-----------|-----------|--------------|
+| Barista | ✅ | ❌ | ✅ (summary) | ❌ | ❌ |
+| Manager | ✅ | ✅ | ✅ (all) | ❌ | ❌ |
+| Owner | ✅ | ✅ | ✅ (all) | ✅ (rare) | ✅ |
+
+**Implementation:**
+
+* NestJS **Guards** + **Roles** decorator.
+* Permissions stored in a static enum; future dynamic permission tables possible.
+
+**Implications:**
+* UI components hide/disable edit controls based on role.
+
+---
+
+### Decision 9 – Inventory Update Workflow
+
+**Flow:**
+
+1. **Barista** records a stock receipt via “Add Stock” screen → creates an **inventory_adjustment** record with `approved_by = NULL`.
+2. **Manager** receives a pending‑approval list → clicks “Approve”.
+3. On approval, system updates `inventory_items.quantity` (`quantity += delta`) and timestamps `updated_at`.
+
+**Rationale:** Directly reflects stakeholder’s “Barista records received stock, manager approves, then system updates inventory”.
+
+**Design Pattern:** **Two‑Phase Commit** (application‑level) – first write a pending record, then apply on approval.
+
+**Trade‑offs:** Slight delay before inventory is usable; acceptable for daily restocking.
+
+---
+
+### Decision 10 – Low‑Stock Notification Mechanism
+
+**Choice:** **Email** notification (via SendGrid) + **in‑app alert** badge for managers.
+
+**Trigger:** A daily scheduled job checks `inventory_items.quantity < reorder_threshold`.
+
+**Rationale:** Email is reliable, simple to implement, and satisfies “automatic low‑stock alert to the manager”.
+
+**Trade‑offs:** No real‑time push; however, daily check is sufficient for a small store.
+
+**Assumption:** Manager’s email is stored in the `users` table and is unique.
+
+---
+
+### Decision 11 – Tax Calculation & Reporting
+
+**Tax Rules:**
+
+* A **configurable tax rate** (e.g., 8.5 %) stored in a `settings` table.
+* Applied per line‑item: `tax_amount = unit_price * quantity * tax_rate`.
+* Total tax summed per sale.
+
+**Reports:**
+
+* **Monthly Tax Summary** endpoint (`/api/reports/tax`) returning total taxable sales, total tax collected, and a CSV export.
+
+**Rationale:** Meets “apply local sales tax to each transaction and generate periodic tax reports”.
+
+**Trade‑offs:** Hard‑coded single tax rate; multi‑jurisdiction tax is out of scope for MVP.
+
+---
+
+### Decision 12 – Data Retention & Backup Strategy
+
+**Policy:** Retain **all** sales, inventory, and user audit data for **7 years**.
+
+**Implementation:**
+
+* PostgreSQL **partitioning** by year to simplify archival.
+* **Daily logical backups** (pg_dump) stored in encrypted object storage (e.g., AWS S3 with bucket‑level encryption).
+* Retention lifecycle rule: keep backups for 7 years, then delete.
+
+**Rationale:** Directly follows stakeholder constraint.
+
+**Scalability:** Partitioning keeps query performance stable as data grows.
+
+---
+
+### Decision 13 – Deployment & Hosting Architecture
+
+**Choice:** **Dockerized** services deployed on **AWS Elastic Container Service (ECS) Fargate** (or equivalent managed container platform).
+
+**Components:**
+
+| Component | Service | Reason |
+|-----------|---------|--------|
+| Front‑end static assets | Amazon CloudFront + S3 | Global CDN, low latency |
+| API (NestJS) | ECS Fargate (2‑3 tasks) | Serverless containers, auto‑scale |
+| PostgreSQL | Amazon RDS (PostgreSQL) | Managed backups, HA |
+| Background jobs (Square webhook, QuickBooks export, low‑stock scan) | Separate ECS task (cron) | Isolation from request path |
+| Email (SendGrid) | SaaS | No SMTP maintenance |
+| Secrets (API keys, DB creds) | AWS Secrets Manager | Centralized secret rotation |
+
+**Rationale:** Cloud‑native, minimal ops overhead, aligns with “moderate” complexity.
+
+**Trade‑offs:** Vendor lock‑in to AWS; can be abstracted later with Terraform modules.
+
+---
+
+### Decision 14 – Scalability & Performance Approach
+
+* **Stateless API** → horizontal scaling via ECS task count.
+* **Connection pooling** (pg‑bouncer) for PostgreSQL to handle concurrent barista requests.
+* **Read‑replica** (optional) for reporting endpoints (tax reports) once daily traffic grows.
+* **Caching**: Use **React Query** client‑side cache; server‑side caching not required for MVP.
+
+**Implication:** The system can comfortably support 10‑20 concurrent users (typical coffee‑shop staff) with headroom for future multi‑store expansion.
+
+---
+
+### Decision 15 – Security Controls (OWASP, Encryption, etc.)
+
+| Control | Implementation |
+|---------|----------------|
+| Transport security | Enforce **HTTPS** everywhere (TLS 1.2+). |
+| Input validation | **class‑validator** on DTOs; server‑side sanitization. |
+| CSRF protection | **SameSite=Strict** cookies + CSRF token for state‑changing POST/PUT/DELETE. |
+| Content Security Policy | Default‑deny with allowed sources for CDN, APIs. |
+| Secure storage | Passwords → bcrypt; API secrets → AWS Secrets Manager; DB at rest → RDS encryption. |
+| Logging & Auditing | Structured logs (JSON) to CloudWatch; audit trail for inventory adjustments and sales. |
+| Rate limiting | **express-rate-limit** (e.g., 100 requests/min per IP). |
+| Dependency hygiene | **npm audit**, Dependabot CI checks. |
+
+**Rationale:** Meets industry best practices and the stakeholder’s password‑policy requirement.
+
+---
+
+### Decision 16 – Testing Strategy
+
+* **Unit tests** – Jest (frontend) & Jest/Nest testing utilities (backend).
+* **Integration tests** – SuperTest against API with an in‑memory PostgreSQL (or test container).
+* **E2E tests** – Cypress covering order entry, inventory approval, low‑stock alert.
+* **CI pipeline** – GitHub Actions: lint → unit → integration → Cypress → build → Docker push.
+
+**Rationale:** Guarantees core flows work before each release; moderate effort for MVP.
+
+---
+
+### Decision 17 – Open Questions / Pending Decisions
+
+| # | Question | Impact if delayed |
+
+|---|----------|-------------------|
+| 1 | **Exact tax jurisdiction rules** (e.g., tax‑exempt items, multiple rates). | Current single‑rate implementation may need adjustment for compliance. |
+| 2 | **Manager approval UI/UX** – modal vs. separate screen, notification method. | UI design will affect development effort; functional backend already defined. |
+| 3 | **Multi‑store support** – will the same app later serve multiple locations? | Database schema may need a `store_id` foreign key; not required now but should be kept in mind. |
+| 4 | **Offline handling** – if the internet drops, should baristas still be able to record sales? | Would require local storage & sync logic – out of scope for MVP. |
+| 5 | **MFA requirement** – will the owner demand two‑factor authentication later? | Current auth can be extended with OTP provider without breaking existing flow. |
+| 6 | **Preferred email service** – SendGrid assumed, but the client may have another provider. | Swappable; just update the email adapter. |
+
+---
+
+## Summary of Key Takeaways for Development
+
+| Area | Decision Highlights |
+|------|---------------------|
+| **Platform** | SPA, web‑only, React + TypeScript |
+| **Back‑end** | NestJS (Node/TS), PostgreSQL, JWT auth |
+| **Integrations** | Square Orders/Payments API, QuickBooks Online daily export |
+| **Roles** | Barista (view only), Manager (edit inventory, view sales), Owner (full) |
+| **Workflow** | Barista records stock → Manager approves → inventory updates; Barista creates order → Square processes payment → sale auto‑recorded |
+| **Alerts** | Daily low‑stock email + in‑app badge |
+| **Tax** | Configurable single rate, periodic CSV tax report |
+| **Retention** | 7‑year data retention, daily encrypted backups |
+| **Security** | HTTPS, bcrypt, password policy, HttpOnly SameSite cookies, rate limiting |
+| **Scalability** | Stateless containers, connection pooling, optional read replicas |
+| **Maintainability** | Modular NestJS, feature‑sliced React, CI pipeline, comprehensive test suite |
+
+These decisions form a concrete, implementation‑ready blueprint for the MVP of the coffee‑store management app. All open questions should be resolved before the first production release, but the current set of assumptions is sufficient to begin development.
+
+# Core Requirements – Coffee‑Store Management Web App (MVP)
+
+> **Goal:** Provide a web‑only application that lets baristas record sales, managers maintain inventory, and the system integrate with Square POS and QuickBooks for real‑time order processing and daily accounting exports.
 
 ---
 
 ## 1. Functional Requirements
 
-| # | Description | Testable Acceptance |
+| # | Description | Acceptance Test |
 
-|---|-------------|----------------------|
-| **FR‑1** | **User Authentication** – Owner must log in with email + password. Passwords are stored hashed. Session expires after 30 min of inactivity. | Owner can successfully log in, is redirected to the dashboard, and is automatically logged out after 30 min idle. |
-| **FR‑2** | **Role‑Based Access Control** – Only the *Owner* role exists; it has full read/write permission on all screens. | Any logged‑in user (owner) can access every feature; attempts to access a protected endpoint without a valid token return 401. |
-| **FR‑3** | **Responsive UI** – All screens must render correctly on ≥ 1024 px (desktop) and ≤ 768 px (tablet/phone). | Visual inspection on Chrome desktop, iPad, and Android phone shows no horizontal scroll, UI elements are usable. |
-| **FR‑4** | **Inventory List View** – Show a table/grid of all inventory items with columns: SKU, Name, Unit, Current Qty, Reorder‑Level, Unit‑Cost, Value. Supports sorting & filtering. | Owner sees a list with at least 10 items, can sort by Qty, filter by “Low Stock”. |
-| **FR‑5** | **Add New Inventory Item** – Owner can create a new item by entering required fields (SKU, Name, Unit, Initial Qty, Reorder‑Level, Unit‑Cost). SKU must be unique. | After adding, the item appears in the list with the correct values; duplicate SKU entry is rejected with an error. |
-| **FR‑6** | **Edit Inventory Item** – Owner can modify any field of an existing item (except SKU). Changes are saved instantly. | Editing the “Current Qty” from 10 → 8 updates the list and persists after page reload. |
-| **FR‑7** | **Delete Inventory Item** – Owner can remove an item after confirming a modal dialog. | After deletion, the item no longer appears in the list; a “Item deleted” toast is shown. |
-| **FR‑8** | **Real‑Time Stock Updates** – When the quantity of any item changes on one device, all other open sessions (desktop, tablet, phone) reflect the new quantity within 2 seconds. | Owner opens the app on two browsers; updating Qty on one causes the other to show the new value within 2 s. |
-| **FR‑9** | **Low‑Stock Alert** – When an item’s quantity falls **≤** its Reorder‑Level, a visual badge (“Low Stock”) appears in the list and a push‑notification‑style toast is shown. | Reducing Qty of “Espresso Beans” to its reorder level triggers the badge and toast on all open sessions. |
-| **FR‑10** | **Transaction Logging** – Every inventory change (add, edit, delete, usage) creates a log entry with timestamp, user, item ID, change amount, and optional note. Owner can view a chronological log. | After a quantity change, the log shows a new row with correct details; log is sortable by date. |
-| **FR‑11** | **Dashboard Summary** – Home screen shows total SKUs, total units on hand, total inventory value, and count of low‑stock items. | Numbers on the dashboard match the underlying data after any change. |
-| **FR‑12** | **Export Inventory Report** – Owner can download a CSV file containing the current inventory snapshot (all fields). | Clicking “Export CSV” triggers a download; the file opens in Excel and matches the on‑screen data. |
-| **FR‑13** | **Logout** – Owner can end the session via a logout button; all session data cleared. | After logout, navigating to any protected URL redirects to the login page. |
+|---|-------------|-----------------|
+| **FR‑1** | **User Authentication** – Users must log in with a valid email address and password (minimum 8 characters). Passwords expire after 90 days and must be changed on next login. | - Attempt login with a valid email/password → success.<br>- Attempt login with password < 8 chars → error “Password too short”.<br>- After 90 days, login → forced password‑change screen appears. |
+| **FR‑2** | **Role‑Based Access Control** – Three roles: **Barista**, **Manager**, **Owner**. Permissions: <br>• Barista: view inventory, create sales. <br>• Manager: view & edit inventory, view sales reports. <br>• Owner: full CRUD on all data and user management. | - Barista logs in → “Edit inventory” button hidden.<br>- Manager logs in → can edit inventory and view sales list.<br>- Owner logs in → can create/delete users and modify any record. |
+| **FR‑3** | **Inventory Item CRUD** – Managers (and Owner) can create, read, update, and delete inventory items. Required fields: product name, SKU/code, unit price, supplier, current quantity, reorder threshold. | - Manager adds a new item with all fields → item appears in list with correct values.<br>- Attempt to save without SKU → validation error “SKU required”. |
+| **FR‑4** | **Stock‑Arrival Workflow** – Barista records a stock receipt (item, quantity received). The entry is stored as **Pending** and triggers a notification to the Manager for approval. Manager can approve or reject; only approved entries update `current quantity`. | - Barista submits a receipt of 10 units → entry shows “Pending”.<br>- Manager approves → `current quantity` increases by 10.<br>- Manager rejects → entry status changes to “Rejected” and quantity unchanged. |
+| **FR‑5** | **Low‑Stock Alert** – When `current quantity` falls **below** the reorder threshold, the system automatically sends an email (or in‑app) alert to all Managers. | - Reduce inventory of an item to 4 units where threshold = 5 → alert email sent within 1 minute. |
+| **FR‑6** | **Sales Entry** – Barista creates a sale by selecting items, quantities, and confirming. The app sends the order to Square via its real‑time API, receives a payment confirmation, and records the transaction. | - Barista creates a sale of 2 coffees, selects “Card” → Square API called, payment approved, sale saved with status “Completed”. |
+| **FR‑7** | **Sales Transaction Data** – Each sale record must store: items sold, quantity per item, unit price, tax amount, total amount, barista ID, payment method, timestamp, and Square transaction ID. | - Verify a saved sale contains all fields and tax calculated correctly (e.g., 8% local tax). |
+| **FR‑8** | **Tax Calculation** – Apply the configured local sales tax rate (e.g., 8 %) to every transaction automatically. Tax amount must be stored and displayed on receipts and reports. | - Sale of $10 before tax → total recorded as $10.80, tax = $0.80. |
+| **FR‑9** | **Periodic Tax Report** – Manager can generate a PDF/CSV tax report for a selectable date range, summarizing taxable sales, tax collected, and net revenue. | - Generate report for last month → file contains correct totals matching stored transactions. |
+| **FR‑10** | **Daily Export to QuickBooks** – At midnight (UTC) the system extracts all sales from the previous day and pushes them to QuickBooks via its API. Export must succeed or be retried up to 3 times; failures are logged and emailed to Owner. | - After a day with 5 sales, QuickBooks receives 5 corresponding invoices/receipts.<br>- Simulated API failure → system retries 3 times, then logs error and sends email. |
+| **FR‑11** | **Data Retention & Backup** – All sales and inventory data must be retained for **7 years**. A daily backup (full DB dump) must be created and stored in a secure, off‑site location. | - Verify backup file exists for each day in the backup bucket.<br>- Query data older than 7 years → records are still present (no purge yet). |
+| **FR‑12** | **Audit Log** – Every create, update, delete, and approval action must be logged with user ID, timestamp, and before/after values. | - Manager edits inventory → audit entry created with old and new quantity. |
+| **FR‑13** | **Responsive UI** – The web UI must work on desktop browsers (Chrome, Firefox, Edge) and adapt to tablet screen sizes (minimum 768 px width). | - Open app on a 10‑inch tablet → layout adjusts, all controls usable. |
+| **FR‑14** | **Session Management** – User sessions expire after 30 minutes of inactivity; a warning modal appears 5 minutes before logout. | - Remain idle for 25 min → warning modal appears.<br>- After 31 min → user redirected to login page. |
 
 ---
 
 ## 2. Non‑Functional Requirements
 
-| Category | Requirement | Acceptance Test |
-|----------|-------------|-----------------|
-| **Performance** | UI actions (add/edit/delete, list pagination) must respond within **200 ms** on a typical 3G/4G connection; real‑time updates must propagate within **2 s**. | Measure response time with Chrome DevTools; all actions meet the thresholds. |
-| **Security** | - All traffic over **HTTPS**.<br>- Passwords stored with **bcrypt (cost ≥ 12)**.<br>- JWT access token signed with HS256, expires in 30 min.<br>- CSRF protection on state‑changing endpoints.<br>- Input sanitised to prevent XSS/SQL injection. | Penetration test confirms no plain‑text passwords, token expiration works, and common OWASP‑Top‑10 attacks are mitigated. |
-| **Scalability** | System must support **up to 5,000 inventory items** and **10 concurrent owner sessions** without degradation. | Load test with 10 simultaneous browsers and 5k items shows <200 ms response. |
-| **Reliability** | Target **99.9 % uptime** (max 8 h downtime per year). Automatic restart on server crash. | Monitoring (e.g., CloudWatch) reports <0.1 % downtime over a 30‑day window. |
-| **Usability** | - UI follows a **mobile‑first responsive design**.<br>- All interactive elements have a minimum touch target of **48 dp**.<br>- Provide contextual help tooltips for each field. | Usability test with 3 owners confirms no hidden controls and easy navigation on phone. |
-| **Maintainability** | - Codebase split into **frontend (React)**, **backend (Node.js/Express)**, **database (PostgreSQL)** modules.<br>- Follow **ESLint** and **Prettier** conventions.<br>- Provide **API documentation** (OpenAPI 3.0). | New developer can run `npm start` and `npm test` with zero errors; API docs are accessible at `/api-docs`. |
-| **Accessibility** | Meet **WCAG 2.1 AA** for contrast, focus order, and ARIA labels. | Automated axe scan returns no violations above AA level. |
-| **Internationalization** | All UI strings externalised for future translation; default language English. | Switching language file to French updates all visible text (even though translations may be placeholder). |
+| Category | Requirement | Metric / Test |
+|----------|-------------|---------------|
+| **Performance** | Page load time for main screens (Dashboard, Inventory List, Sales Entry) ≤ 2 seconds on a 3G connection. | Automated Lighthouse test. |
+| | API latency to Square & QuickBooks ≤ 500 ms per request (excluding network). | Measure average response time in integration tests. |
+| **Security** | Passwords stored with bcrypt (cost factor ≥ 12). | Verify password hash algorithm in DB. |
+| | Enforce HTTPS everywhere; HSTS header set (max‑age 31536000). | SSL Labs grade A+. |
+| | Role‑based authorization enforced server‑side for every endpoint. | Attempt unauthorized API call → 403 response. |
+| | Input sanitisation to prevent XSS, SQL injection, CSRF (use same‑site cookies, CSRF tokens). | OWASP ZAP scan passes. |
+| **Scalability** | Design for up to **500 concurrent users** without degradation. | Load test with 500 virtual users, response ≤ 3 s. |
+| **Reliability** | System uptime ≥ 99.5 % monthly (excluding scheduled maintenance). | Monitoring alerts on downtime. |
+| | Automatic retry logic for external API calls (Square, QuickBooks) up to 3 attempts with exponential back‑off. | Simulated failure triggers retries. |
+| **Usability** | Barista can complete a sale within **2 minutes** from order start to payment confirmation. | Usability test with 5 baristas, average ≤ 2 min. |
+| | All UI text must be in English, with clear error messages (< 80 characters). | Review of UI copy. |
+| **Maintainability** | Codebase follows **Node.js/Express** (backend) and **React** (frontend) with ESLint + Prettier. | Lint passes with 0 errors. |
+| | Unit test coverage ≥ 80 % for core business logic; integration test coverage ≥ 70 %. | Coverage reports. |
+| **Compliance** | Data stored in GDPR‑compliant region (EU) and respects user‑right‑to‑delete (owner can purge a user’s personal data). | Deletion request removes email/password from DB. |
 
 ---
 
@@ -387,37 +757,40 @@ Create a **web‑based, responsive management console** that enables the coffee�
 
 | Constraint | Detail |
 |------------|--------|
-| **Platform** | Web application, served via modern browsers (Chrome ≥ 90, Safari ≥ 14, Edge ≥ 90). |
-| **Frontend Stack** | React 18 + TypeScript, React‑Query for data fetching, Material‑UI (MUI) for components, WebSocket (Socket.io) for real‑time sync. |
-| **Backend Stack** | Node.js 20, Express 4, JWT auth, Socket.io server, PostgreSQL 15. |
-| **Hosting** | Deploy to AWS (Elastic Beanstalk or ECS) behind an Application Load Balancer; static assets on S3 + CloudFront. |
-| **Build & CI/CD** | GitHub Actions pipeline: lint → unit tests → build → deploy. |
-| **Data Persistence** | PostgreSQL schema versioned via Flyway or Prisma migrations. |
-| **Real‑Time** | Use **WebSocket** (Socket.io) with fallback to long‑polling. |
-| **Browser Support** | Must work on latest Chrome, Safari, Edge on desktop and iOS/Android browsers. |
-| **No External SaaS** | All components must be self‑hosted; no reliance on third‑party inventory services. |
+| **Platform** | Web‑only, responsive SPA built with **React 18** (hooks) and **Node.js 20** + **Express**. |
+| **Database** | PostgreSQL 15 (hosted on managed service). |
+| **Hosting** | Deploy to a cloud provider supporting auto‑scaling (e.g., AWS Elastic Beanstalk, Azure App Service). |
+| **APIs** | Use Square **Orders API** and **Payments API** (OAuth token stored securely). Use QuickBooks **Online API** (OAuth 2.0). |
+| **Email** | Transactional alerts (low‑stock, export failures) sent via a reputable service (SendGrid, SES). |
+| **Backup** | Daily logical dump stored in encrypted S3 bucket with versioning. |
+| **Time Zones** | All timestamps stored in UTC; UI displays in local store time zone (configurable). |
+| **Licensing** | All third‑party libraries must be MIT/BSD/Apache‑2.0 compatible. |
 
 ---
 
 ## 4. Integration Requirements
 
-| Integration | Description | Notes |
-|-------------|-------------|-------|
-| **Barcode/QR Scanner** (optional) | Ability to scan SKU codes via device camera to quickly locate or update an item. | Not required for MVP; placeholder UI element with “Scan” button that can be wired later. |
-| **POS System** (future) | Export inventory adjustments as JSON for downstream POS sync. | Define an endpoint `/api/v1/inventory/sync` that returns current inventory snapshot. |
-| **Email Service** | Send low‑stock alerts to owner’s email (optional). | Use AWS SES; can be disabled in config. |
-| **Analytics** | Track usage metrics (page views, actions) via Google Analytics (or self‑hosted Matomo). | Must respect privacy settings; opt‑out toggle in settings. |
+| Integration | Direction | Data Flow | Frequency / Trigger |
+|-------------|-----------|-----------|----------------------|
+| **Square POS** | Outbound (order & payment) & Inbound (payment confirmation) | Barista → App → Square **CreateOrder** → Square **CreatePayment** → Confirmation returned → Sale persisted. | Real‑time per sale. |
+| **QuickBooks Online** | Outbound (daily export) | App → QuickBooks **CreateInvoice** (or SalesReceipt) for each sale of previous day. | Nightly batch (00:05 UTC). |
+| **Email Service** | Outbound | System → SendGrid/SES for low‑stock alerts, export‑failure notifications. | Event‑driven. |
+| **Backup Storage** | Outbound | DB dump → S3 bucket (encrypted). | Daily at 02:00 UTC. |
+
+*All external API keys/secrets must be stored in a secret manager (e.g., AWS Secrets Manager) and never committed to source control.*
 
 ---
 
 ## 5. Data Requirements
 
-| Entity | Fields | Constraints |
-|--------|--------|-------------|
-| **User** | `id (UUID)`, `email (unique)`, `password_hash`, `role (enum: OWNER)`, `created_at`, `updated_at` | Email required, valid format. |
-| **InventoryItem** | `id (UUID)`, `sku (string, unique)`, `name`, `unit (e.g., “kg”, “pcs”)`, `quantity (numeric, ≥ 0)`, `reorder_level (numeric, ≥ 0)`, `unit_cost (numeric, ≥ 0)`, `created_at`, `updated_at` | SKU unique, quantity cannot be negative. |
-| **InventoryLog** | `id (UUID)`, `item_id (FK)`, `user_id (FK)`, `change_amount (numeric, can be negative)`, `note (text)`, `timestamp` | `change_amount` cannot cause resulting quantity < 0 (validated). |
-| **SessionToken** | `token (JWT)`, `user_id`, `expires_at` | Stored in HTTP‑only cookie or local storage (secure). |
+| Entity | Required Fields | Data Types | Constraints |
+|--------|----------------|------------|-------------|
+| **User** | id (UUID), email (unique), passwordHash, role (enum), passwordLastChanged (date), createdAt, updatedAt | UUID, varchar, enum | Email format validated; password ≥ 8 chars. |
+| **InventoryItem** | id (UUID), name, sku (unique), unitPrice (decimal, ≥ 0), supplier, quantity (int ≥ 0), reorderThreshold (int ≥ 0), createdAt, updatedAt, status (active/archived) | UUID, varchar, decimal, int | SKU uniqueness; quantity cannot be negative. |
+| **StockReceipt** | id, itemId (FK), receivedQty (int > 0), recordedBy (userId), status (pending/approved/rejected), createdAt, approvedAt, approvedBy | UUID, int, FK, enum | Only Manager can change status to approved/rejected. |
+| **Sale** | id, items (JSON array of {itemId, qty, unitPrice}), taxAmount (decimal), totalAmount (decimal), baristaId, paymentMethod (enum), squareTransactionId, timestamp | UUID, JSON, decimal, enum | totalAmount = Σ(qty·unitPrice) + taxAmount; tax calculated using configured rate. |
+| **AuditLog** | id, entity (enum), entityId, action (create/update/delete/approve), performedBy, beforeData (JSON), afterData (JSON), timestamp | UUID, enum, JSON, timestamp | Immutable. |
+| **ExportLog** | id, exportDate, status (success/failure), attempts, errorMessage (nullable) | UUID, date, enum, int, text | Retained for 1 year. |
 
 ---
 
@@ -425,41 +798,49 @@ Create a **web‑based, responsive management console** that enables the coffee�
 
 | Rule | Where Applied | Description |
 |------|----------------|-------------|
-| **SKU uniqueness** | `Add/Edit Item` form | Reject if another record already has the same SKU. |
-| **Quantity ≥ 0** | Any quantity update (add, edit, usage) | Server must enforce; UI shows error “Quantity cannot be negative”. |
-| **Reorder‑Level ≤ Quantity** (optional) | `Add/Edit Item` | Allow setting reorder level higher than current quantity (to trigger alert). |
-| **Email format** | Login/registration (if future) | Must match RFC 5322 pattern. |
-| **Password strength** | Registration (future) | Minimum 8 characters, at least one number & one letter. |
-| **CSV export** | Export endpoint | Must include header row; all fields escaped per RFC 4180. |
+| **Email format** | User registration/login | Must match RFC‑5322 pattern. |
+| **Password length** | Registration & password change | Minimum 8 characters. |
+| **SKU uniqueness** | Inventory create/edit | Duplicate SKU → error “SKU already exists”. |
+| **Quantity ≥ 0** | Inventory edit, receipt approval | Negative quantity → reject with “Quantity cannot be negative”. |
+| **ReceivedQty > 0** | Stock receipt entry | Zero or negative → error. |
+| **ReorderThreshold ≥ 0** | Inventory create/edit | Negative → error. |
+| **Tax calculation** | Sale creation | Tax = subtotal × taxRate (rounded to 2 decimals). |
+| **TotalAmount consistency** | Sale persistence | totalAmount must equal subtotal + taxAmount; otherwise reject. |
+| **Payment method enum** | Sale entry | Allowed values: `card`, `cash`, `mobile`. |
+| **Date range for reports** | Tax report UI | Start ≤ End; range ≤ 1 year. |
+| **Password expiration** | Login | If `passwordLastChanged` > 90 days → force change. |
 
 ---
 
 ## 7. Error Handling Requirements
 
-| Situation | Expected Behavior |
-|-----------|-------------------|
-| **Network failure** (fetch error) | Show a persistent banner “Unable to connect – retrying…”, automatically retry every 5 s. |
-| **WebSocket disconnect** | Show toast “Realtime connection lost – attempting reconnection…”, attempt reconnection with exponential back‑off. |
-| **Validation error** (e.g., duplicate SKU) | Display inline field error with clear message; prevent form submission. |
-| **Server error (5xx)** | Show generic “Something went wrong. Please try again later.” and log error to server logs with request ID. |
-| **Unauthorized (401)** | Redirect to login page, clear stored token. |
-| **Forbidden (403)** | Show “You do not have permission to perform this action.” (should never happen for owner). |
-| **CSV generation error** | Return HTTP 500 with JSON `{error: "Export failed"}`; UI shows toast “Export failed – please contact support”. |
-
-All errors must be logged with **timestamp, user ID, endpoint, request payload (excluding sensitive data), and stack trace** on the backend.
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| **Square API failure** (network or 5xx) | Retry up to 3 times with exponential back‑off; if still failing, mark sale as **PendingPayment**, show error to barista, and log the incident. |
+| **QuickBooks export failure** | Retry 3 times; on final failure, mark ExportLog as *failure*, send email to Owner with error details, and continue normal operation. |
+| **Invalid input** (e.g., missing SKU) | Return HTTP 400 with JSON `{ "error": "SKU required" }`; UI displays inline validation message. |
+| **Unauthorized access** | Return HTTP 403; UI redirects to “Access Denied” page. |
+| **Database connection loss** | Return HTTP 503 with friendly message “Service temporarily unavailable, please try again later.”; trigger alert to Ops team. |
+| **Backup failure** | Log error, retry next scheduled backup, send alert email. |
+| **Low‑stock alert delivery failure** | Log failure, retry email send 2 times; if still failing, create a system notification visible in the Manager dashboard. |
 
 ---
 
-## 8. Acceptance Criteria – Major Requirements
+## 8. Acceptance Criteria (Major Requirements)
 
-1. **Owner Login & Session** – Owner can log in, stay authenticated for 30 min, and be logged out automatically or via logout button.
-2. **Responsive Inventory UI** – The inventory list, add/edit forms, and dashboard render correctly on desktop (≥ 1024 px) and tablet/phone (≤ 768 px) without horizontal scrolling.
-3. **Real‑Time Sync** – Quantity changes made on any device propagate to all other open sessions within 2 seconds, and low‑stock alerts appear instantly.
-4. **Low‑Stock Alert** – When quantity ≤ reorder level, a badge and toast appear on every session; the badge persists until quantity is increased above the threshold.
-5. **Data Persistence** – All CRUD operations are persisted in PostgreSQL; after a full page reload the data reflects the latest state.
-6. **Export Functionality** – Owner can download a CSV that matches the current inventory view; file opens correctly in Excel/Sheets.
-7. **Security** – All API calls require a valid JWT; passwords are stored hashed; the app runs over HTTPS; OWASP‑Top‑10 tests pass.
-8. **Performance** – Under a load of 10 concurrent owner sessions and 5 000 items, UI actions complete within 200 ms and real‑time updates within 2 s.
+| # | Requirement | Acceptance Criteria |
+
+|---|-------------|---------------------|
+| **AC‑1** | **Authentication & Password Policy** | Users can log in with email/password; passwords < 8 chars are rejected; after 90 days login forces password change; all communication over HTTPS. |
+| **AC‑2** | **Role‑Based Permissions** | Barista cannot edit inventory; Manager can edit inventory and view sales; Owner can manage users. Attempted violations return 403. |
+| **AC‑3** | **Inventory CRUD & Low‑Stock Alert** | Manager creates an item; barista records a receipt; manager approves; quantity updates; when quantity < threshold, manager receives email within 1 minute. |
+| **AC‑4** | **Sales Flow with Square Integration** | Barista creates a sale; Square payment processed; sale saved with correct tax and total; receipt displayed; transaction ID stored. |
+| **AC‑5** | **Daily QuickBooks Export** | At midnight, system pushes previous day’s sales to QuickBooks; Owner receives email on success/failure; exported data matches internal records. |
+| **AC‑6** | **Data Retention & Backup** | System retains all records for 7 years; daily backup file exists in S3; backup can be restored to a test DB without data loss. |
+| **AC‑7** | **Tax Calculation & Reporting** | Sales automatically include 8 % tax; generated tax report for a date range matches summed tax amounts from transactions. |
+| **AC‑8** | **Performance** | Dashboard loads ≤ 2 s on 3G; API latency to Square ≤ 500 ms; system sustains 500 concurrent users in load test. |
+| **AC‑9** | **Security** | Passwords stored with bcrypt; OWASP ZAP scan reports no critical/high issues; CSRF tokens validated on all state‑changing requests. |
+| **AC‑10** | **Usability** | Barista can complete a sale in ≤ 2 minutes in a usability test; UI adapts to tablet screen without overflow. |
 
 ---
 
@@ -468,13 +849,13 @@ All errors must be logged with **timestamp, user ID, endpoint, request payload (
 | # | Assumption |
 
 |---|------------|
-| **A‑1** | Only a single user role (Owner) exists for the MVP; no staff or multi‑owner scenarios. |
-| **A‑2** | Inventory changes are performed exclusively through this web app (no external POS feeding data in real time). |
-| **A‑3** | The store has reliable internet connectivity; offline‑first capability is **not** required for the initial release. |
-| **A‑4** | Barcode scanning will be added later; for now the SKU is entered manually. |
-| **A‑5** | The owner will use modern browsers that support WebSockets; fallback to long‑polling is only a safety net. |
-| **A‑6** | No multi‑currency or tax calculations are needed at this stage. |
-| **A‑7** | Data retention policy: inventory logs are kept indefinitely (or until manual purge). |
+| **A‑1** | Square provides a stable OAuth token that does not require frequent re‑authorization. |
+| **A‑2** | QuickBooks Online API supports bulk invoice creation for the daily export batch. |
+| **A‑3** | The store operates in a single time zone; tax rate is constant (e.g., 8 %). |
+| **A‑4** | Email service (SendGrid/SES) is already provisioned and can send from `alerts@coffeestore.com`. |
+| **A‑5** | All users have unique email addresses; no duplicate accounts. |
+| **A‑6** | The “owner” role will be assigned to a single user initially; multi‑owner support is out of scope for MVP. |
+| **A‑7** | Inventory items are simple (no variants like size/color) for MVP. |
 
 ---
 
@@ -483,1302 +864,286 @@ All errors must be logged with **timestamp, user ID, endpoint, request payload (
 | # | Question |
 
 |---|----------|
-| **Q‑1** | Will the owner ever need **role‑based delegation** (e.g., barista, manager) in future releases? |
-| **Q‑2** | Should low‑stock alerts also be sent via **email or SMS**, or is an in‑app toast sufficient? |
-| **Q‑3** | What is the expected **maximum number of inventory items** (beyond the 5 000 baseline) for scalability planning? |
-| **Q‑4** | Are there any **regulatory compliance** requirements (e.g., GDPR, PCI) that affect data storage or logging? |
-| **Q‑5** | Will the app need to integrate with an existing **POS system** for sales‑driven inventory deductions? |
-| **Q‑6** | Is there a need for **audit trails** (who changed what and when) beyond the simple inventory log? |
-| **Q‑7** | Should the CSV export include **historical transaction logs** or only the current snapshot? |
+| **Q‑1** | What is the exact local sales tax rate and are there any tax‑exempt product categories? |
+| **Q‑2** | Should the low‑stock alert be sent via SMS in addition to email? |
+| **Q‑3** | Is there a requirement for barista shift logging (clock‑in/out) that might affect sales attribution? |
+| **Q‑4** | Will the owner need the ability to export raw data (CSV) for ad‑hoc analysis? |
+| **Q‑5** | Are there any branding/custom‑theme requirements (logo, colors) for the UI? |
+| **Q‑6** | What is the preferred method for handling password expiration notifications (email vs. in‑app)? |
 
 ---
 
 ## 11. Remarks
 
-* **PWA Consideration:** Even though offline mode is not required now, building the frontend as a Progressive Web App (service worker caching) will simplify future offline support.
-* **Scalability Path:** If the owner later adds staff roles, the RBAC layer should be designed to accommodate additional roles without major refactor.
-* **Testing Strategy:** Include unit tests for business logic, integration tests for API endpoints, and end‑to‑end (Cypress) tests covering real‑time sync across two browsers.
-* **Monitoring:** Deploy CloudWatch alarms for WebSocket disconnect rates and API latency to meet the performance SLA.
+* **Scalability:** Although MVP targets a single store, the architecture (REST API + React SPA) is designed to support multi‑store expansion with minimal changes (e.g., adding a `storeId` column).
+* **Compliance:** Retaining data for 7 years satisfies most accounting regulations, but verify local legal requirements for any additional constraints (e.g., GDPR right‑to‑erasure).
+* **Testing:** Include end‑to‑end Cypress tests for the sales flow, inventory approval workflow, and low‑stock alert generation.
+* **Monitoring:** Implement basic health‑check endpoints and integrate with a monitoring platform (e.g., Datadog) to track API latency, error rates, and backup success.
 
 ---
 
-*Prepared by: Systems Analyst – Requirements Clarification Session*
+*Prepared for the development team to begin implementation of the Coffee‑Store Management Web App MVP.*
 
-## Important Decisions – Coffee‑Store Management App
+## User Journey / Workflow
 
-*(Decision Records – concise, testable, and implementation‑ready)*
+*Coffee‑store Management Web App – MVP (Inventory Management & Sales Tracking)*
 
-| # | Decision | Status | Owner |
-
-|---|----------|--------|-------|
-| 1 | Front‑end framework & UI library | ✅ Decided | Front‑end lead |
-| 2 | Back‑end platform & API style | ✅ Decided | Back‑end lead |
-| 3 | Real‑time inventory sync mechanism | ✅ Decided | Architecture lead |
-| 4 | Data storage (DB) & schema | ✅ Decided | DB architect |
-| 5 | Authentication & authorization model | ✅ Decided | Security lead |
-| 6 | Deployment & hosting model | ✅ Decided | DevOps lead |
-| 7 | Responsive design & device support | ✅ Decided | UX lead |
-| 8 | Security hardening measures | ✅ Decided | Security lead |
-| 9 | Scalability & load‑handling strategy | ✅ Decided | Architecture lead |
-| 10| Maintainability & code‑base conventions | ✅ Decided | Tech lead |
-| 11| Open questions / pending confirmations | ❓ Open | – |
-
-Below each decision is documented with **Rationale**, **Alternatives considered**, **Trade‑offs / Implications**, **Design patterns**, and any **Assumptions** that were made.
-
----
-
-### Decision 1 – Front‑end framework & UI library
-
-**Choice:** **React 18** (with TypeScript) + **Material‑UI (MUI) v5**
-
-**Rationale**
-* Owner will use the app on desktop browsers **and** tablets/phones → a single‑page application (SPA) with a component library that ships responsive components out‑of‑the‑box.
-* React’s ecosystem (hooks, context, React‑Query) simplifies real‑time data handling and state synchronization across devices.
-* MUI provides a polished, accessible design system that matches the “coffee‑shop” aesthetic and reduces custom CSS effort.
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| Vue 3 + Vuetify | Slightly smaller ecosystem for TypeScript; team familiarity is lower. |
-| Angular | Heavier bundle size; steeper learning curve for a single‑owner app. |
-| Svelte | Very small bundle but limited third‑party libraries for real‑time sync. |
-
-**Trade‑offs**
-* **Bundle size** – React + MUI ≈ 150 KB gzipped (acceptable for 3G/4G).
-* **Learning curve** – Minimal for developers already familiar with JavaScript/TS.
-
-**Design patterns**
-* **Component‑Driven Architecture** – UI built from reusable, testable components.
-* **Container‑Presentation pattern** – Data fetching logic lives in container components (React‑Query).
-
-**Assumptions**
-* The owner will have a modern browser (Chrome/Edge/Firefox ≥ 90).
-
----
-
-### Decision 2 – Back‑end platform & API style
-
-**Choice:** **Node.js 20** with **Express** (TypeScript) exposing a **RESTful JSON API** plus **WebSocket** endpoint via **Socket.io**
-
-**Rationale**
-* Same language (JavaScript/TS) across front‑ and back‑end reduces context‑switching.
-* Express is lightweight, well‑documented, and works seamlessly with Socket.io for real‑time events.
-* REST is sufficient for CRUD inventory operations; WebSocket handles push updates.
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| Python/Django | Requires separate language stack; WebSocket support (Channels) adds complexity. |
-| Go (Gin) | Faster runtime but less mature ecosystem for rapid UI‑centric prototyping. |
-| GraphQL | Overkill for a single‑entity CRUD app; adds client‑side query complexity. |
-
-**Trade‑offs**
-* **Performance** – Node is adequate for moderate load (≤ 100 concurrent users).
-* **Scalability** – Stateless API enables horizontal scaling behind a load balancer.
-
-**Design patterns**
-* **Repository pattern** – Abstract DB access behind repository interfaces.
-* **Service layer** – Business logic (inventory adjustments) isolated from controllers.
-
-**Assumptions**
-* All inventory changes are initiated via the web UI (no external POS integration at launch).
-
----
-
-### Decision 3 – Real‑time inventory sync mechanism
-
-**Choice:** **Socket.io** (WebSocket fallback to long‑polling)
-
-**Rationale**
-* Owner may have multiple devices open (desktop + tablet) and expects immediate visibility of stock changes.
-* Socket.io abstracts transport fallback, works well with Express, and provides simple event‑based API.
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| Firebase Realtime Database / Firestore | Adds vendor lock‑in and extra cost; unnecessary for a single‑owner app. |
-| Server‑Sent Events (SSE) | Unidirectional (server‑to‑client only) – not suitable for client‑initiated updates. |
-| Polling (e.g., every 5 s) | Increases latency and server load. |
-
-**Trade‑offs**
-* **Connection overhead** – One persistent socket per client; negligible for ≤ 5 concurrent devices.
-* **Complexity** – Requires handling reconnection logic on the client (React‑Query + socket.io client handles this).
-
-**Design patterns**
-* **Observer pattern** – Inventory service publishes “stockChanged” events; UI components subscribe.
-
-**Assumptions**
-* Network is stable enough for WebSocket; fallback to long‑polling is acceptable for intermittent connectivity.
-
----
-
-### Decision 4 – Data storage (DB) & schema
-
-**Choice:** **PostgreSQL 15** (hosted on managed service – e.g., AWS RDS or Azure Database for PostgreSQL)
-
-**Rationale**
-* Relational model fits inventory items (id, name, sku, quantity, unit, low_stock_threshold).
-* Strong ACID guarantees prevent race conditions when multiple devices adjust the same stock.
-* PostgreSQL’s LISTEN/NOTIFY can be leveraged for future server‑side push (optional).
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| MySQL | Comparable, but PostgreSQL offers richer JSON support for future extensions. |
-| MongoDB | Document model unnecessary for simple tabular data; lacks built‑in transactions across collections. |
-| SQLite (file‑based) | Not suitable for multi‑device concurrent writes. |
-
-**Trade‑offs**
-* **Operational cost** – Managed PostgreSQL incurs modest monthly cost but removes admin overhead.
-* **Scalability** – Vertical scaling (larger instance) is sufficient for current load; read replicas can be added later.
-
-**Design patterns**
-* **Entity‑Relationship modeling** – Clear foreign‑key relationships (e.g., inventory → categories).
-* **Unit of Work** – Each inventory adjustment wrapped in a DB transaction.
-
-**Assumptions**
-* Inventory items are limited to < 10 000 rows; performance will be well within limits.
-
----
-
-### Decision 5 – Authentication & authorization model
-
-**Choice:** **Password‑based login** with **JSON Web Tokens (JWT)** stored in **HttpOnly Secure cookies**
-
-**Rationale**
-* Only a single user role (Owner) → simple username/password is sufficient.
-* JWT enables stateless authentication for the REST API and works with Socket.io (token passed on connection).
-* HttpOnly Secure cookies protect the token from XSS theft.
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| OAuth2 (Google, Apple) | Overkill for a single‑owner app; adds third‑party dependency. |
-| Session‑based server storage | Requires sticky sessions or external session store; adds statefulness. |
-
-**Trade‑offs**
-* **Revocation** – JWT revocation requires token blacklist or short expiry (15 min) + refresh token flow. Implemented via refresh‑token endpoint.
-* **Complexity** – Slightly more code than a simple session, but aligns with stateless API design.
-
-**Design patterns**
-* **Strategy pattern** – Authentication strategy can be swapped later (e.g., to OAuth).
-
-**Assumptions**
-* Owner will set a strong password; optional 2FA can be added later.
-
----
-
-### Decision 6 – Deployment & hosting model
-
-**Choice:** **Docker containers** orchestrated by **Docker Compose** for local dev and **AWS Elastic Beanstalk** (or Azure App Service) for production.
-
-**Rationale**
-* Containerization guarantees identical environments across dev, test, and prod.
-* Elastic Beanstalk abstracts provisioning (EC2, load balancer, RDS) while still allowing custom Docker images.
-* Simpler than full Kubernetes for a moderate‑complexity, low‑traffic app.
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| Vercel / Netlify (serverless) | Limited support for long‑running WebSocket connections. |
-| Kubernetes (EKS/AKS) | Over‑engineered for expected load; higher operational overhead. |
-| Bare‑metal VM | Increases maintenance burden. |
-
-**Trade‑offs**
-* **Scalability** – Elastic Beanstalk can auto‑scale EC2 instances; WebSocket sticky sessions handled via Application Load Balancer with “sticky‑session” enabled.
-* **Cost** – Small EC2 instance + RDS is cost‑effective (< $50/mo).
-
-**Design patterns**
-* **12‑factor app** – Config via environment variables, separate build & run stages.
-
-**Assumptions**
-* Production traffic will stay under 200 concurrent socket connections.
-
----
-
-### Decision 7 – Responsive design & device support
-
-**Choice:** **Mobile‑first responsive layout** using **MUI’s Grid & Breakpoints**; test on Chrome desktop, iPad, and Android phone.
-
-**Rationale**
-* Owner will operate the app on both large desktop screens (POS area) and small tablets/phones (quick stock checks).
-* MUI provides built‑in breakpoints and accessibility support, reducing custom CSS.
-
-**Alternatives considered**
-| Alternative | Why rejected |
-|-------------|--------------|
-| Separate native mobile app | Increases scope and maintenance; not needed for a single user. |
-| CSS frameworks (Bootstrap) | Similar capability but MUI already selected for component library. |
-
-**Trade‑offs**
-* **Touch ergonomics** – Ensure tap targets ≥ 48 dp; may need custom styling for inventory increment/decrement buttons.
-
-**Design patterns**
-* **Adaptive UI components** – Same component renders differently based on breakpoint.
-
-**Assumptions**
-* No need for offline‑first capabilities at launch.
-
----
-
-### Decision 8 – Security hardening measures
-
-| Measure | Implementation |
-|---------|----------------|
-| **HTTPS everywhere** | Enforce TLS via AWS ALB; redirect HTTP → HTTPS. |
-| **Content Security Policy (CSP)** | Default‑src `self`; script‑src `self` `unsafe-inline` (only if required). |
-| **Rate limiting** | Express‑Rate‑Limit: 100 req/min per IP for auth endpoints. |
-| **Input validation & sanitisation** | Zod schema validation on all API payloads. |
-| **SQL injection protection** | Parameterised queries via `pg` library / ORM (Prisma). |
-| **XSS protection** | React escapes by default; avoid `dangerouslySetInnerHTML`. |
-| **CSRF protection** | HttpOnly SameSite=Strict cookies; CSRF token not needed for JWT‑in‑cookie flow. |
-| **Security headers** | Helmet middleware (HSTS, X‑Frame‑Options, X‑Content‑Type‑Options). |
-| **Backup & disaster recovery** | Automated daily snapshots of RDS; retention 7 days. |
-
-**Rationale** – Owner’s data (inventory, financial) is sensitive; even a single‑user app must follow OWASP Top‑10 basics.
-
-**Assumptions**
-* Owner will use a password manager; no public API exposure beyond the web UI.
-
----
-
-### Decision 9 – Scalability & load‑handling strategy
-
-**Horizontal scaling** – Stateless API containers behind an ALB; enable **auto‑scaling** based on CPU > 70 % (min 1, max 3 instances).
-
-**WebSocket scaling** – Use **sticky sessions** on the ALB to keep a client bound to the same container; each container maintains its own Socket.io namespace. For future growth (> 500 concurrent sockets) consider **Redis Pub/Sub** as a message broker to broadcast inventory events across instances.
-
-**Database scaling** – Start with a single‑node RDS instance; enable **read replica** only if reporting queries become heavy.
-
-**Caching** – No server‑side cache needed initially; client‑side caching via React‑Query with background refetch.
-
-**Assumptions**
-* Current expected load: ≤ 5 simultaneous devices; scaling plan is future‑proof.
-
----
-
-### Decision 10 – Maintainability & code‑base conventions
-
-| Aspect | Standard |
-|--------|----------|
-| **Language** | TypeScript ≥ 5.0 for both front‑ and back‑end. |
-| **Linting** | ESLint (Airbnb) + Prettier; enforce via pre‑commit hook. |
-| **Testing** | Jest + React Testing Library (unit); Supertest for API integration; 80 % coverage minimum. |
-| **CI/CD** | GitHub Actions: lint → test → build → Docker image → deploy to Elastic Beanstalk. |
-| **Documentation** | API documented with OpenAPI (Swagger) generated from route annotations. |
-| **Versioning** | Semantic versioning (MAJOR.MINOR.PATCH). |
-| **Branching model** | GitHub Flow (feature → PR → main). |
-| **Error handling** | Centralised error middleware; error codes mapped to HTTP status. |
-| **Logging** | Winston (JSON) → CloudWatch; include requestId for traceability. |
-
-**Rationale** – Consistent tooling reduces technical debt and eases onboarding of future developers.
-
----
-
-### Decision 11 – Open Questions / Pending Confirmations
-
-| # | Question | Impact if answered differently |
-
-|---|----------|--------------------------------|
-| 1 | **Will the owner ever need multi‑user staff access (barista, manager) with limited permissions?** | May require role‑based access control (RBAC) and UI segregation; could affect auth design. |
-| 2 | **Is offline capability (e.g., inventory updates while Wi‑Fi down) required?** | Would push us toward a client‑side DB (IndexedDB) and sync conflict resolution. |
-| 3 | **Do we need barcode/QR scanning integration for fast inventory entry?** | Requires camera access, scanning library, and possibly a separate micro‑service for decoding. |
-| 4 | **What reporting/analytics are expected (e.g., daily sales, stock‑turnover)?** | May need additional data models, background jobs, and a reporting UI. |
-| 5 | **Is there a requirement for integration with external POS or accounting software?** | Would introduce webhooks / API connectors and data mapping logic. |
-| 6 | **Preferred cloud provider (AWS vs Azure vs GCP)?** | Affects IaC scripts, managed services (RDS vs Azure PostgreSQL). |
-| 7 | **Do we need to comply with any specific regulations (PCI‑DSS, GDPR) for inventory data?** | May affect data retention, encryption at rest, and audit logging. |
-
-**Next steps** – Clarify these items with the store owner before the first sprint ends.
-
----
-
-## Summary
-
-The above decisions give the development team a **clear, testable blueprint**:
-
-* **React + MUI** for a responsive SPA.
-* **Node/Express + Socket.io** for a stateless REST API with real‑time push.
-* **PostgreSQL** for reliable inventory persistence.
-* **JWT in HttpOnly cookies** for simple, secure owner‑only authentication.
-* **Docker + Elastic Beanstalk** for reproducible, auto‑scalable deployment.
-
-All decisions are justified, trade‑offs documented, and pending questions identified, enabling the team to start implementation with confidence while keeping the door open for future extensions.
-
-## Coffee‑Store Management App – User Journey / Workflow
-
-**Target audience:** Store Owner (single‑user role, full‑control)
-**Primary goal:** Track inventory in real‑time on desktop **and** tablet/phone.
-
----
-
-### 1. High‑Level Flow Diagram (textual)
-
-```
-[Login] → [Dashboard] → {Inventory View | Receive Shipment | Generate Report | Settings}
-                │
-                ├─► Inventory View
-                │       ├─► Scan / Search Item
-                │       ├─► Update Stock (Sale / Waste / Restock)
-                │       └─► Receive Low‑Stock Alert
-                │
-                ├─► Receive Shipment
-                │       ├─► Upload Supplier Manifest OR Scan Barcodes
-                │       └─► Confirm Qty → Update Stock
-                │
-                ├─► Generate Report
-                │       ├─► Choose Date Range / Item Filter
-                │       └─► Export (PDF/CSV) or View on‑screen
-                │
-                └─► Settings
-                        ├─► Manage Items (Add / Edit / Delete)
-                        ├─► Set Reorder Thresholds
-                        └─► Configure Notifications
-```
-
-Below each block is expanded into a step‑by‑step user journey.
-
----
-
-## 2. Primary Feature – Real‑Time Inventory Management
-
-### 2.1. User Flow: “Update Stock for a Sale / Waste / Restock”
-
-| Step | Actor | Action / Interaction | System Response | Touchpoint / External Service |
-|------|-------|----------------------|-----------------|------------------------------|
-| **1** | Owner | Open the app on **desktop** or **tablet/phone** → enters credentials (email + password). | Auth service validates, returns JWT, redirects to **Dashboard**. | Authentication API (OAuth2 / custom). |
-| **2** | Owner | Clicks **“Inventory”** tile on Dashboard. | Loads **Inventory List** (paginated, responsive). Shows current quantity, low‑stock indicator (yellow/red). | Inventory Service → DB read. |
-| **3** | Owner | Locates an item: <br>• **Search bar** (type SKU or name) **or** <br>• **Barcode scanner** (mobile camera or attached scanner). | Real‑time filter → highlights matching row. If barcode scanned, auto‑selects the row. | UI component; optional barcode‑scan library. |
-| **4** | Owner | Chooses **“Adjust Quantity”** button on the item row. | Opens **Adjustment Modal** with three tabs: *Sale*, *Waste*, *Restock*. Current quantity displayed. | Front‑end modal component. |
-| **5** | Owner | Selects the appropriate tab and enters the **delta** (e.g., `‑3` for a sale of 3 cups). | **Validation** runs: <br>• Delta must be an integer. <br>• Resulting quantity ≥ 0 (unless “Allow Negative” is toggled in Settings). | Validation logic in UI + server‑side check. |
-| **6** | Owner | Presses **“Confirm”**. | System sends **PATCH /items/{id}/stock** with `{ delta: -3, reason: "sale", timestamp }`. <br>• DB transaction updates quantity. <br>• WebSocket (or Server‑Sent Events) pushes new quantity to all open client sessions. | Inventory Service → DB; Real‑time push channel. |
-| **7** | System | Returns **200 OK** with updated quantity. UI updates the row instantly. | If new quantity ≤ reorder threshold, a **low‑stock toast** appears and an optional push/email notification is queued. | Notification Service (optional). |
-| **8** | Owner | Continues adjusting other items or logs out. | Session remains active until explicit logout or timeout. | Session management. |
-
-#### Decision Points & Alternatives
-
-| # | Decision | Paths |
-
-|---|----------|-------|
-| **5a** | “Resulting quantity would become negative?” | – **Block** and show error (default). <br>– **Allow** if Settings → “Negative inventory allowed” is ON (used for back‑order tracking). |
-| **6a** | Network unavailable when confirming? | – **Retry** automatically (exponential back‑off). <br>– If still offline, **store locally** (IndexedDB) and sync when back online (offline‑first fallback). |
-| **3a** | Barcode scan fails (unreadable)? | – Prompt manual entry. <br>– Show “Item not found” error with **Add New Item** shortcut. |
-
-#### Edge Cases & Error Handling
-
-| Situation | Detection | User Feedback |
-|-----------|-----------|---------------|
-| **Concurrent update** (another device changed the same item seconds earlier) | Server returns **409 Conflict** with latest quantity. | Modal shows “Quantity changed by another session. Current quantity is X. Adjust again?” |
-| **Invalid SKU** entered in search | No matching row after 2 seconds of typing. | Inline “No items match ‘XYZ’. Press **Add New** to create.” |
-| **Server timeout** (≥ 10 s) | No response to PATCH request. | Toast “Unable to reach server. Changes saved locally and will sync automatically.” |
-| **Database error** (e.g., constraint violation) | 500 response with error code. | Modal displays “Unexpected error – please try again or contact support.” |
-| **Low‑stock threshold not set** | Item record missing `reorderThreshold`. | System treats threshold as **0** (always visible) and shows a warning icon prompting the owner to set it in Settings. |
-
-#### Success Scenario
-
-1. Owner logs in, navigates to Inventory, scans a barcode, adjusts quantity by –2, confirms.
-2. System updates DB, pushes new quantity to all open sessions, shows low‑stock toast because quantity ≤ threshold.
-3. Owner sees updated number instantly, receives optional email notification, and continues work.
-
-#### Failure Scenario
-
-1. Owner attempts to adjust quantity, but the network drops.
-2. PATCH request fails, client stores the delta locally.
-3. Owner receives toast “Offline – change saved locally.” When connectivity returns, the app syncs automatically; if a conflict occurs, the owner is prompted to resolve.
-
----
-
-## 3. Secondary Feature – Receiving a Shipment
-
-| Step | Actor | Action | System Response | Touchpoint |
-|------|-------|--------|-----------------|------------|
-| 1 | Owner | From Dashboard → **“Receive Shipment”**. | Loads **Shipment Wizard** (stepper UI). |
-| 2 | Owner | Upload supplier CSV **or** scan each barcode on the packing list. | CSV parser validates columns (SKU, Qty). Barcode scan auto‑adds rows. |
-| 3 | System | For each line, verifies SKU exists. If missing, shows **“Item not found – create now?”** modal. |
-| 4 | Owner | Confirms all lines, optionally edits quantities (e.g., damaged goods). |
-| 5 | Owner | Clicks **“Confirm Receipt”**. | Sends bulk **POST /shipments** with array of `{ sku, receivedQty }`. |
-| 6 | System | Transactionally increments each item’s quantity, records a **Shipment** record (date, supplier, user). |
-| 7 | System | Pushes updated quantities via WebSocket; shows **“Shipment recorded – inventory updated.”** toast. |
-| 8 | Owner | Optionally **export receipt** (PDF) for supplier. |
-
-**Decision points** – If any SKU is unknown → owner can **Create New Item** (jump to Settings > Manage Items) or **Skip** the line.
-**Edge case** – CSV contains duplicate SKUs → system consolidates and prompts for confirmation.
-
----
-
-## 4. Secondary Feature – Generate Inventory Report
-
-| Step | Actor | Action | System Response |
-|------|-------|--------|-----------------|
-| 1 | Owner | Dashboard → **“Reports”** → **“Inventory Summary”**. |
-| 2 | Owner | Selects date range (e.g., last 30 days) and optional filters (category, low‑stock only). |
-| 3 | System | Queries DB for: <br>• Opening balance, <br>• Total sales, <br>• Waste, <br>• Restocks, <br>• Closing balance per SKU. |
-| 4 | System | Renders a **table** with sortable columns and a **chart** (bars for movement). |
-| 5 | Owner | Clicks **“Export”** → choose **PDF** or **CSV**. |
-| 6 | System | Generates file on‑the‑fly, streams download. |
-| 7 | Owner | Saves or prints the report. |
-
-**Failure** – If query exceeds timeout (large data set) → show “Report generation is taking longer than expected. Continue in background and notify when ready.” and send an email with the download link.
-
----
-
-## 5. Secondary Feature – Settings (Item Management & Alerts)
-
-| Step | Actor | Action | System Response |
-|------|-------|--------|-----------------|
-| 1 | Owner | Dashboard → **“Settings”** → **“Manage Items”**. |
-| 2 | Owner | Click **“Add New Item”** → fill form (SKU, name, unit, initial qty, reorder threshold). |
-| 3 | System | Validates uniqueness of SKU, required fields. Saves to DB, returns 201. |
-| 4 | Owner | Edit or delete existing items via row actions. |
-| 5 | Owner | Set **notification preferences** (email, push, SMS). |
-| 6 | System | Stores preferences; on low‑stock events, triggers chosen channels via Notification Service. |
-
-**Edge case** – Deleting an item that has historic transactions → system **soft‑deletes** (marks as inactive) and prevents physical removal to preserve audit trail.
-
----
-
-## 6. Cross‑Cutting Concerns
-
-| Concern | Detail |
-|---------|--------|
-| **Authentication & Authorization** | Only the Owner role exists; JWT with `role:owner`. All API endpoints require `Authorization: Bearer <token>`. |
-| **Responsive UI** | Use CSS Grid / Flexbox; breakpoints for ≤ 768 px (tablet/phone) and > 768 px (desktop). |
-| **Real‑time sync** | WebSocket (or SSE) channel `inventory-updates` pushes `{ sku, newQty }` to all connected clients. |
-| **Offline support** | Front‑end stores pending adjustments in IndexedDB; sync on reconnection. |
-| **Audit trail** | Every stock change logs `userId`, `timestamp`, `delta`, `reason`. Accessible via admin logs (future feature). |
-| **Scalability** | Inventory Service stateless; can be horizontally scaled behind a load balancer. DB indexed on `sku`. |
-| **Security** | Input sanitization, CSRF token for state‑changing requests, HTTPS everywhere. |
-| **Data backup** | Daily DB snapshot; retention 30 days. |
-
----
-
-## 7. Assumptions
-
-| # | Assumption |
-
-|---|------------|
-| A1 | The app will have **only one user role** (Owner) – no staff accounts are required at this stage. |
-| A2 | Inventory items are uniquely identified by a **SKU** (alphanumeric). |
-| A3 | The owner will have a reliable internet connection in the store, but occasional brief outages are expected; offline‑first fallback is sufficient. |
-| A4 | Barcode scanning will be performed via the device camera (mobile) or a USB scanner that emulates keyboard input – no specialized driver integration needed. |
-| A5 | Low‑stock notifications are optional and can be toggled in Settings; default is email to the owner’s registered address. |
-| A6 | No integration with an external POS system is required for the MVP; stock adjustments are entered manually or via barcode scan. |
-| A7 | All data resides in a relational DB (e.g., PostgreSQL) with a single `items` table and related `transactions` table. |
-| A8 | The system will run on a cloud‑hosted environment (e.g., AWS Elastic Beanstalk) with HTTPS termination at the load balancer. |
-
----
-
-## 8. Open Questions
-
-| # | Question |
-
-|---|----------|
-| Q1 | Will the owner ever need **multi‑user** access (e.g., barista, accountant) in the future? |
-| Q2 | Should the app support **automatic re‑order** (e.g., generate purchase order email when threshold crossed)? |
-| Q3 | Is there a preferred **notification channel** (push via service worker, SMS, Slack) beyond email? |
-| Q4 | Will the inventory include **perishable items** that require expiration‑date tracking? |
-| Q5 | Are there any **regulatory compliance** (e.g., tax reporting) requirements that affect the data model? |
-| Q6 | Should the app provide **offline‑only mode** (no network at all) with later manual sync? |
-| Q7 | What is the expected **maximum number of distinct SKUs** (affects pagination & indexing strategy)? |
-
----
-
-## 9. Remarks
-
-* **Testing** – Unit tests for stock‑adjustment logic, integration tests for the PATCH endpoint, and end‑to‑end Cypress tests covering the full inventory flow on both desktop and mobile viewports.
-* **Performance** – Inventory list should load < 2 seconds for up to 5 000 items (use server‑side pagination, lazy loading). Real‑time push updates must be under 300 ms latency.
-* **UX** – Keep the adjustment modal minimal (single input, confirm/cancel). Use color‑coded icons for Sale (red), Waste (gray), Restock (green).
-* **Error Logging** – Centralized logging (e.g., CloudWatch) for all 4xx/5xx responses; surface user‑friendly messages only.
-
----
-
-**End of User Journey / Workflow specification**. This document can be handed to developers, UI/UX designers, and QA engineers to build and validate the core inventory‑tracking functionality of the coffee‑store management web app.
-
-## Data Model – Coffee‑Store Management App
-
-*(focused on real‑time inventory tracking for a single‑owner store, usable on desktop and tablet/phone)*
-
----
-
-### 1. Entity Overview
-
-| Entity | Short Description | Primary Key |
-|--------|-------------------|-------------|
-| **Owner** | The single user who runs the store. Holds full permissions. | `owner_id` (UUID) |
-| **Store** | Physical location of the coffee shop (useful if the app is later expanded to multiple stores). | `store_id` (UUID) |
-| **Product** | Coffee‑related items that can be sold (e.g., beans, drinks, pastries, supplies). | `product_id` (UUID) |
-| **InventoryItem** | Current stock record for a given product at a specific store. | `inventory_id` (UUID) |
-| **Supplier** | External vendor that provides products or raw materials. | `supplier_id` (UUID) |
-| **PurchaseOrder** | Order placed by the owner to a supplier to restock inventory. | `po_id` (UUID) |
-| **PurchaseOrderLine** | Line‑item details of a PurchaseOrder (product, quantity, cost). | `pol_id` (UUID) |
-| **Sale** | A transaction where a product is sold to a customer (used to decrement inventory). | `sale_id` (UUID) |
-| **SaleLine** | Individual product items within a Sale. | `sale_line_id` (UUID) |
-| **AuditLog** | Immutable record of critical data changes (inventory adjustments, PO creation, etc.). | `log_id` (UUID) |
-
-> **Note:** Because the app is for a single owner, tenant boundaries are trivial – all data belongs to the same tenant (the owner). If multi‑store support is added later, `store_id` will become the tenant discriminator.
-
----
-
-### 2. Detailed Entity Definitions
-
-#### 2.1 Owner
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `owner_id` | UUID | – | ✔ | Auto‑generated, unique |
-| `email` | VARCHAR | 255 | ✔ | Valid email, unique |
-| `password_hash` | VARCHAR | 255 | ✔ | BCrypt/Argon2 hash |
-| `full_name` | VARCHAR | 150 | ✔ | Non‑empty |
-| `created_at` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `updated_at` | TIMESTAMP | UTC | ✔ | Auto‑updated on change |
-
-**Indexes**: Unique index on `email`.
-
-**Permissions**: Owner has *full* CRUD rights on every entity.
-
----
-
-#### 2.2 Store
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `store_id` | UUID | – | ✔ | Auto‑generated |
-| `owner_id` | UUID (FK → Owner) | – | ✔ | Cascade delete not allowed (owner deletion must be manual) |
-| `name` | VARCHAR | 150 | ✔ | Non‑empty |
-| `address` | TEXT | – | ✖ | Optional |
-| `phone` | VARCHAR | 20 | ✖ | Optional, phone‑format regex |
-| `created_at` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `updated_at` | TIMESTAMP | UTC | ✔ | Auto‑updated |
-
-**Indexes**: Primary key, foreign‑key index on `owner_id`.
-
-**Relationship**: One **Owner** → many **Stores** (1‑N).
-
----
-
-#### 2.3 Product
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `product_id` | UUID | – | ✔ | Auto‑generated |
-| `store_id` | UUID (FK → Store) | – | ✔ | Ensures product belongs to a store |
-| `sku` | VARCHAR | 50 | ✔ | Unique per store |
-| `name` | VARCHAR | 150 | ✔ | Non‑empty |
-| `category` | ENUM | (`Coffee Bean`, `Beverage`, `Food`, `Supply`, `Other`) | ✔ | Default `Other` |
-| `unit` | VARCHAR | 20 | ✔ | e.g., `kg`, `pcs`, `liter` |
-| `unit_price` | DECIMAL(10,2) | – | ✔ | ≥ 0 |
-| `created_at` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `updated_at` | TIMESTAMP | UTC | ✔ | Auto‑updated |
-
-**Indexes**: Unique composite index on (`store_id`, `sku`).
-
-**Relationship**: One **Store** → many **Products** (1‑N).
-
----
-
-#### 2.4 InventoryItem
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `inventory_id` | UUID | – | ✔ | Auto‑generated |
-| `store_id` | UUID (FK → Store) | – | ✔ | |
-| `product_id` | UUID (FK → Product) | – | ✔ | One‑to‑one per store |
-| `quantity_on_hand` | DECIMAL(12,3) | – | ✔ | ≥ 0 (allows fractional units for weight) |
-| `reorder_point` | DECIMAL(12,3) | – | ✖ | Optional; triggers low‑stock alerts |
-| `reorder_quantity` | DECIMAL(12,3) | – | ✖ | Optional; suggested PO amount |
-| `last_updated` | TIMESTAMP | UTC | ✔ | Auto‑updated on any stock change |
-
-**Indexes**: Unique composite index on (`store_id`, `product_id`).
-
-**Relationships**:
-* One **Store** → many **InventoryItems** (1‑N)
-* One **Product** → one **InventoryItem** per store (1‑1)
-
-**Business Rule**: `quantity_on_hand` is **derived** from the sum of all `PurchaseOrderLine` receipts minus the sum of all `SaleLine` quantities for the same product. The field is stored for fast reads but must be kept in sync via transactional updates or event sourcing.
-
----
-
-#### 2.5 Supplier
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `supplier_id` | UUID | – | ✔ | Auto‑generated |
-| `store_id` | UUID (FK → Store) | – | ✔ | |
-| `name` | VARCHAR | 150 | ✔ | Non‑empty |
-| `contact_name` | VARCHAR | 150 | ✖ | Optional |
-| `email` | VARCHAR | 255 | ✖ | Optional, valid email if present |
-| `phone` | VARCHAR | 20 | ✖ | Optional, phone‑format regex |
-| `address` | TEXT | – | ✖ | Optional |
-| `created_at` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `updated_at` | TIMESTAMP | UTC | ✔ | Auto‑updated |
-
-**Indexes**: Unique composite index on (`store_id`, `name`).
-
-**Relationship**: One **Store** → many **Suppliers** (1‑N).
-
----
-
-#### 2.6 PurchaseOrder
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `po_id` | UUID | – | ✔ | Auto‑generated |
-| `store_id` | UUID (FK → Store) | – | ✔ | |
-| `supplier_id` | UUID (FK → Supplier) | – | ✔ | |
-| `po_number` | VARCHAR | 30 | ✔ | Unique per store |
-| `status` | ENUM | (`Draft`, `Submitted`, `Received`, `Cancelled`) | ✔ | Default `Draft` |
-| `order_date` | DATE | – | ✔ | |
-| `expected_receipt_date` | DATE | – | ✖ | Optional |
-| `total_amount` | DECIMAL(12,2) | – | ✔ | Computed from lines (read‑only) |
-| `created_at` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `updated_at` | TIMESTAMP | UTC | ✔ | Auto‑updated |
-
-**Indexes**: Unique composite index on (`store_id`, `po_number`).
-
-**Relationship**: One **PurchaseOrder** → many **PurchaseOrderLine** (1‑N).
-
----
-
-#### 2.7 PurchaseOrderLine
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `pol_id` | UUID | – | ✔ | Auto‑generated |
-| `po_id` | UUID (FK → PurchaseOrder) | – | ✔ | |
-| `product_id` | UUID (FK → Product) | – | ✔ | |
-| `ordered_quantity` | DECIMAL(12,3) | – | ✔ | > 0 |
-| `unit_cost` | DECIMAL(10,2) | – | ✔ | ≥ 0 |
-| `received_quantity` | DECIMAL(12,3) | – | ✖ | Default 0, ≤ `ordered_quantity` |
-| `line_total` | DECIMAL(12,2) | – | ✔ | Computed = `ordered_quantity * unit_cost` (read‑only) |
-
-**Indexes**: Composite index on (`po_id`, `product_id`).
-
-**Business Rule**: When `received_quantity` is updated, the corresponding `InventoryItem.quantity_on_hand` must be incremented by the delta.
-
----
-
-#### 2.8 Sale
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `sale_id` | UUID | – | ✔ | Auto‑generated |
-| `store_id` | UUID (FK → Store) | – | ✔ | |
-| `sale_timestamp` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `total_amount` | DECIMAL(12,2) | – | ✔ | Sum of `SaleLine.line_total` |
-| `payment_method` | ENUM | (`Cash`, `Card`, `Mobile`, `Other`) | ✔ | |
-| `status` | ENUM | (`Open`, `Closed`, `Voided`) | ✔ | Default `Closed` (once posted) |
-| `created_at` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `updated_at` | TIMESTAMP | UTC | ✔ | Auto‑updated |
-
-**Indexes**: Index on `sale_timestamp`, composite index on (`store_id`, `sale_timestamp`).
-
-**Relationship**: One **Sale** → many **SaleLine** (1‑N).
-
----
-
-#### 2.9 SaleLine
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `sale_line_id` | UUID | – | ✔ | Auto‑generated |
-| `sale_id` | UUID (FK → Sale) | – | ✔ | |
-| `product_id` | UUID (FK → Product) | – | ✔ | |
-| `quantity` | DECIMAL(12,3) | – | ✔ | > 0 |
-| `unit_price` | DECIMAL(10,2) | – | ✔ | Snapshot of product price at sale time |
-| `line_total` | DECIMAL(12,2) | – | ✔ | Computed = `quantity * unit_price` (read‑only) |
-
-**Indexes**: Composite index on (`sale_id`, `product_id`).
-
-**Business Rule**: Upon sale creation (status `Closed`), decrement `InventoryItem.quantity_on_hand` by `quantity`. If resulting quantity would be negative, reject transaction and raise a low‑stock error.
-
----
-
-#### 2.10 AuditLog
-
-| Attribute | Data Type | Format / Length | Required? | Validation / Constraints |
-|-----------|-----------|-----------------|-----------|--------------------------|
-| `log_id` | UUID | – | ✔ | Auto‑generated |
-| `entity_type` | VARCHAR | 50 | ✔ | e.g., `InventoryItem`, `PurchaseOrder` |
-| `entity_id` | UUID | – | ✔ | Primary key of the affected row |
-| `action` | ENUM | (`CREATE`, `UPDATE`, `DELETE`) | ✔ | |
-| `changed_by` | UUID (FK → Owner) | – | ✔ | |
-| `change_timestamp` | TIMESTAMP | UTC | ✔ | Default `NOW()` |
-| `payload_before` | JSONB | – | ✖ | Optional snapshot |
-| `payload_after` | JSONB | – | ✖ | Optional snapshot |
-
-**Indexes**: Index on (`entity_type`, `entity_id`), index on `change_timestamp`.
-
-**Retention**: Keep for at least 2 years; archive older logs to cold storage.
-
----
-
-### 3. Relationship Diagram (textual)
-
-```
-Owner 1 ──< Store >───1 Product
-      │                │
-      │                └─1 InventoryItem (per store)
-      │
-      └─1 Supplier >───* PurchaseOrder >───* PurchaseOrderLine
-                     │
-                     └─* Sale >───* SaleLine
-```
-
-* `*` = many, `1` = one.
-* All foreign keys cascade **ON UPDATE** but **RESTRICT** on DELETE (except soft‑delete via `status` fields).
-
----
-
-### 4. Data Constraints & Validations
-
-| Constraint | Where Applied | Description |
-|------------|----------------|-------------|
-| **Positive Quantity** | `InventoryItem.quantity_on_hand`, `PurchaseOrderLine.ordered_quantity`, `SaleLine.quantity` | Must be ≥ 0 (or > 0 for ordered/sold amounts). |
-| **Unique SKU per Store** | `Product` | Enforced by composite unique index (`store_id`, `sku`). |
-| **PO Number uniqueness** | `PurchaseOrder` | Composite unique index (`store_id`, `po_number`). |
-| **Email format** | `Owner.email`, `Supplier.email` | Regex validation. |
-| **Phone format** | `Store.phone`, `Supplier.phone` | Simple regex (e.g., `^\+?[0-9\s\-]{7,20}$`). |
-| **Reorder Point logic** | `InventoryItem.reorder_point` | If set, must be ≤ `quantity_on_hand`. |
-| **Status transitions** | `PurchaseOrder.status`, `Sale.status` | Business‑logic enforced (e.g., cannot receive PO after `Cancelled`). |
-| **Monetary precision** | All `DECIMAL(10,2)` fields | Rounds to 2 decimal places, never negative. |
-| **Audit immutability** | `AuditLog` | No UPDATE/DELETE allowed; only INSERT. |
-
----
-
-### 5. Indexes, Keys & Uniqueness
-
-| Table | Index Type | Columns | Purpose |
-|-------|------------|---------|---------|
-| Owner | PK | `owner_id` | Primary key |
-| Owner | Unique | `email` | Login lookup |
-| Store | PK | `store_id` | Primary key |
-| Store | FK | `owner_id` | Owner‑store relationship |
-| Product | PK | `product_id` | Primary key |
-| Product | Unique | (`store_id`, `sku`) | SKU uniqueness per store |
-| InventoryItem | PK | `inventory_id` | Primary key |
-| InventoryItem | Unique | (`store_id`, `product_id`) | One inventory record per product/store |
-| Supplier | PK | `supplier_id` | Primary key |
-| Supplier | Unique | (`store_id`, `name`) | Prevent duplicate supplier names |
-| PurchaseOrder | PK | `po_id` | Primary key |
-| PurchaseOrder | Unique | (`store_id`, `po_number`) | PO number uniqueness |
-| PurchaseOrderLine | PK | `pol_id` | Primary key |
-| PurchaseOrderLine | Composite | (`po_id`, `product_id`) | Fast line lookup |
-| Sale | PK | `sale_id` | Primary key |
-| Sale | Index | `sale_timestamp` | Reporting & time‑range queries |
-| SaleLine | PK | `sale_line_id` | Primary key |
-| SaleLine | Composite | (`sale_id`, `product_id`) | Fast aggregation per sale |
-| AuditLog | PK | `log_id` | Primary key |
-| AuditLog | Composite | (`entity_type`, `entity_id`) | Retrieve history per entity |
-| AuditLog | Index | `change_timestamp` | Auditing over time |
-
----
-
-### 6. Ownership & Permissions
-
-* **Owner** (single user) → **Full CRUD** on every table.
-* No row‑level security needed now, but the schema includes `store_id` on all tables to make future multi‑tenant or multi‑store extensions straightforward.
-* All write operations must be performed within a database transaction that also writes a corresponding `AuditLog` entry.
-
----
-
-### 7. Data Lifecycle
-
-| Entity | Creation | Update | Deletion / Archival |
-|--------|----------|--------|---------------------|
-| Owner | Registration (manual) | Profile edit | **Soft** – set a `deactivated_at` flag (not in current schema) |
-| Store | Owner creates store | Edit details | **Soft** – `status` flag (future) |
-| Product | Owner adds product | Price/unit changes | **Soft** – keep historical sales; mark `is_active` flag |
-| InventoryItem | Auto‑created when first PO receipt or first Sale for a product | Stock adjustments (PO receipt, Sale) | Never deleted; quantity may go to 0 |
-| Supplier | Owner adds supplier | Contact updates | **Soft** – `is_active` flag |
-| PurchaseOrder | Owner creates (Draft) → Submit | Receiving quantities, status changes | **Soft** – keep for audit; status `Cancelled` |
-| Sale | POS creates sale (Closed) | Rarely updated (e.g., correction) | **Soft** – `status = Voided` for refunds |
-| AuditLog | Auto‑generated on every write | **Immutable** | Retain for 2 years, then archive |
-
----
-
-### 8. Assumptions
-
-| # | Assumption |
-
-|---|------------|
-| 1 | The app will manage **one owner** but may later support **multiple stores** under the same owner; therefore `store_id` is included on most tables. |
-| 2 | Inventory quantities can be fractional (e.g., kilograms of beans), hence `DECIMAL` with 3 decimal places is used. |
-| 3 | Real‑time inventory is achieved by **synchronous updates** on PO receipt and Sale creation; no eventual‑consistency queue is required for the MVP. |
-| 4 | All monetary values are stored in the store’s **local currency**; currency conversion is out of scope. |
-| 5 | Authentication is handled separately (e.g., JWT); the data model only stores the hashed password. |
-| 6 | No external accounting integration is required now; `unit_price` on `Product` is the selling price, while `unit_cost` on PO lines captures purchase cost. |
-| 7 | The system will run on a relational DB that supports UUID, JSONB, and ENUM (e.g., PostgreSQL). |
-
----
-
-### 9. Open Questions
-
-| # | Question |
-
-|---|----------|
-| 1 | Will the owner need **batch imports** of products or inventory (CSV upload)? If so, we may need a staging table or import log. |
-| 2 | Are **expiration dates** relevant for any products (e.g., perishable food)? If yes, add `expiry_date` to `Product`/`InventoryItem`. |
-| 3 | Should the system keep **historical price changes** (price history table) for reporting? |
-| 4 | Will there be **discounts or promotions** that affect `SaleLine.unit_price`? If yes, a `Promotion` entity may be required. |
-| 5 | Is there a requirement for **offline mode** on tablets (e.g., POS offline sync)? This would affect how inventory updates are queued. |
-| 6 | Do we need **multi‑currency** support for suppliers (different purchase currencies)? |
-
----
-
-### 10. Remarks
-
-* **Performance** – Real‑time inventory reads will hit the `InventoryItem` table directly; ensure the `quantity_on_hand` column is indexed and kept in sync via atomic DB transactions to avoid race conditions on concurrent sales.
-* **Scalability** – Even with a single store, using UUID primary keys and proper indexing prepares the system for future multi‑store expansion without schema changes.
-* **Security** – Store all passwords hashed with a strong algorithm (e.g., Argon2id). Sensitive fields (`email`, `phone`) should be encrypted at rest if compliance demands it.
-* **Testing** – Write unit tests for the inventory adjustment logic (PO receipt vs. Sale) and for the low‑stock alert trigger (`quantity_on_hand <= reorder_point`).
-
----
-
-*This data model provides a concrete, implementation‑ready foundation for the coffee‑store management app’s core requirement: **real‑time inventory tracking** while supporting the owner’s full control across desktop and tablet/phone interfaces.*
-
-# Coffee‑Store Management App – UI Screen Outline
-
-*(Owner‑only web application, responsive for desktop + tablet/phone)*
-
----
-
-## 1. Screen Catalog
-
-| # | Screen | Primary Purpose | Key UI Components | Main Owner Actions |
-
-|---|--------|----------------|-------------------|--------------------|
-| 1 | **Login / Unlock** | Authenticate the owner and protect data | • Email / Username field  <br>• Password field  <br>• “Remember me” toggle  <br>• Sign‑in button  <br>• Forgot password link | • Sign‑in  <br>• Request password reset |
-| 2 | **Dashboard (Home)** | Quick snapshot of store health & navigation hub | • Header with app name & avatar  <br>• Real‑time **Inventory Summary** cards (total SKUs, low‑stock count, value)  <br>• **Recent Activity** feed (stock adjustments, new items)  <br>• Shortcut tiles: *Inventory*, *Add Item*, *Settings* | • Open Inventory list  <br>• Jump to Add Item  <br>• Open Settings |
-| 3 | **Inventory List** | Browse, search, filter all stock items | • Search bar (by name, SKU, barcode)  <br>• Filter dropdown (category, location, stock status)  <br>• Sort controls (name, qty, last updated)  <br>• Table/List rows: thumbnail, name, SKU, quantity, unit, low‑stock indicator, last‑updated timestamp  <br>• “Add New Item” FAB (floating action button) | • Open item detail/edit  <br>• Bulk select → Delete / Export / Adjust quantity  <br>• Refresh (real‑time auto‑refresh) |
-| 4 | **Item Detail / Edit** | View and modify a single product’s data | • Header with back button & item name  <br>• Photo carousel / upload button  <br>• Form fields: Name, SKU, Category, Unit (e.g., “kg”, “pcs”), Current Qty, Reorder Threshold, Supplier, Cost, Retail Price, Notes  <br>• Real‑time **Quantity Adjust** widget (plus/minus, manual entry)  <br>• Save / Cancel buttons  <br>• Delete item button (danger style) | • Edit any field  <br>• Adjust quantity (increase/decrease)  <br>• Save changes  <br>• Delete item |
-| 5 | **Add New Item** | Register a brand‑new inventory SKU | • Same form layout as Item Detail (empty)  <br>• “Create” button (primary)  <br>• Optional “Copy from existing” selector  <br>• Validation messages (required fields, duplicate SKU) | • Fill form & create item  <br>• Cancel |
-| 6 | **Low‑Stock Alerts** | Dedicated view of items below reorder threshold | • List similar to Inventory List but auto‑filtered to low‑stock  <br>• Bulk “Order Now” action (opens external supplier link or triggers email)  <br>• Quick “Adjust Qty” inline control | • Adjust quantity to restock  <br>• Export low‑stock report |
-| 7 | **Settings** | Configure app‑wide preferences | • Tabs: *General*, *Notifications*, *Integrations*  <br>• Fields: Store name, Timezone, Currency, Default reorder threshold, Email for alerts, API keys (if any)  <br>• “Save Changes” button | • Update preferences  <br>• Enable/disable low‑stock email notifications |
-| 8 | **Profile / Account** | Owner’s personal info & security | • Avatar, Name, Email  <br>• Change password form  <br>• Two‑factor authentication toggle  <br>• Logout button | • Update password / 2FA  <br>• Log out |
-| 9 | **Help / About** | Quick reference & support contact | • FAQ accordion  <br>• Link to support email / chat  <br>• App version display | • Open support channel |
-
----
-
-## 2. Navigation Flow
-
-```
-[Login] → (if authenticated) → [Dashboard]
-   ↳ Dashboard shortcuts → Inventory List
-   ↳ Dashboard shortcuts → Add New Item
-   ↳ Dashboard shortcuts → Settings
-   ↳ Dashboard shortcuts → Low‑Stock Alerts
-
-Inventory List
-   ↳ Row click → Item Detail / Edit
-   ↳ FAB → Add New Item
-   ↳ Bulk actions → (Delete / Export / Adjust Qty)
-
-Item Detail / Edit
-   ↳ Save → returns to Inventory List (with success toast)
-   ↳ Cancel / Back → Inventory List
-
-Low‑Stock Alerts
-   ↳ Adjust Qty inline → updates Item Detail (or stays on list)
-   ↳ Order Now → external link / email
-
-Settings / Profile / Help
-   ↳ Accessible via header menu (hamburger on mobile)
-   ↳ Logout → Login screen
-```
-
-*All screens maintain a persistent top‑level navigation bar (desktop) or a hamburger drawer (mobile) that contains links to Dashboard, Inventory, Low‑Stock, Settings, Profile, Help, and Logout.*
-
 ---
-
-## 3. Wireframe Descriptions (textual)
-
-### 3.1 Login / Unlock
-
-- **Desktop:** Centered card (400 px width) with logo at top, fields stacked vertically, “Sign In” button full‑width.
-- **Mobile:** Same card, full‑width, with larger tap targets.
-- **States:**
-  - **Empty:** Blank fields.
-  - **Loading:** Spinner inside button, fields disabled.
-  - **Error:** Red banner “Invalid credentials” above form.
-  - **Success:** Redirect to Dashboard.
-
-### 3.2 Dashboard
-
-- **Header:** Left‑aligned app logo, right‑aligned avatar (opens Profile menu).
-- **Main area (desktop):** 3‑column grid of summary cards (Inventory Count, Low‑Stock, Total Value). Below, a horizontal scrollable “Recent Activity” timeline.
-- **Mobile:** Cards stacked vertically, activity feed as accordion.
-- **States:**
-  - **Loading:** Skeleton cards + spinner.
-  - **Empty:** “No inventory yet – add your first item” CTA.
-  - **Error:** Inline alert with retry button.
-
-### 3.3 Inventory List
-
-- **Desktop:** Full‑width table with column headers fixed; each row clickable. Search bar above, filter dropdowns left, sort icons right. FAB at bottom‑right for “Add”.
-- **Mobile:** List view; each item row expands on tap to reveal key details and quick “Adjust Qty” buttons. Search bar collapses into an icon.
-- **States:**
-  - **Loading:** Table skeleton rows.
-  - **Empty:** Centered illustration + “No items – add one”.
-  - **Error:** Full‑screen error with “Retry”.
-  - **Success:** Toast “Inventory refreshed”.
-
-### 3.4 Item Detail / Edit
 
-- **Desktop:** Two‑column layout – left column for photo carousel, right column for form fields. Sticky “Save” button at top‑right. “Delete” button in red at bottom.
-- **Mobile:** Photo carousel on top, then vertically stacked form fields. “Save” button fixed at bottom of screen.
-- **States:**
-  - **Loading:** Full‑screen spinner.
-  - **Error:** Inline field validation messages; global error banner for server failures.
-  - **Success:** Toast “Item saved”, auto‑navigate back to Inventory List.
+### 1. Inventory Reception & Approval Flow
 
-### 3.5 Add New Item
+| Actor | System | External Service |
+|-------|--------|------------------|
+| **Barista** | **Web UI** | |
+| **Manager** | **Web UI** | |
+| **Database** | | |
+| **Email / In‑app Notification Service** | | |
 
-- Mirrors Item Detail layout but all fields empty. “Create” button replaces “Save”. Validation prevents duplicate SKU.
+#### 1.1. Record New Stock Arrival (Barista)
 
-### 3.6 Low‑Stock Alerts
+1. **Barista logs in** → system validates credentials (see Auth Flow).
+2. From the dashboard, selects **“Receive Stock”** → UI displays a **“New Stock Entry”** form.
+3. Barista fills required fields for each item:
 
-- **Desktop:** Table identical to Inventory List but pre‑filtered; additional column “Days Since Last Restock”. Bulk “Order Now” button appears when rows selected.
-- **Mobile:** List view with low‑stock badge (red) on each item. Inline “+” button to quickly increase quantity.
+   - Product name (autocomplete from master list)
+   - SKU / code (must match an existing product)
+   - Supplier (select from saved list)
+   - Received quantity (positive integer)
+   - Unit cost (optional, for reference)
 
-### 3.7 Settings
+4. Barista clicks **“Submit for Approval.”**
 
-- **Tabs** across top (desktop) or accordion sections (mobile). Each section contains labeled input fields and a “Save Changes” button at the bottom.
+   - **System response:**
+     - Validates form (all required fields present, quantity > 0, SKU exists).
+     - Creates a **PendingStockEntry** record with status **“Pending.”**
+     - Sends an **in‑app notification** and **email** to all users with the **Manager** role.
 
-### 3.8 Profile / Account
+5. UI shows **“Stock entry submitted and awaiting manager approval.”**
 
-- Simple form with avatar upload, name/email fields (email read‑only), password change fields, 2FA toggle, and a “Logout” button.
+#### 1.2. Manager Review & Approval
 
-### 3.9 Help / About
+1. Manager receives notification, opens **“Pending Stock Approvals.”**
+2. For each entry, manager can **“Approve”** or **“Reject.”**
 
-- FAQ list with collapsible answers, contact button that opens mailto: link, and version number at bottom.
+   - **Approve path:**
+     1. System updates **PendingStockEntry** status to **“Approved.”**
+     2. System **adds** the received quantity to the **Product.current_quantity** field.
+     3. System logs the action (who approved, timestamp).
+     4. System sends a **confirmation notification** to the originating Barista.
 
----
-
-## 4. UI States (per screen)
-
-| State | Description | Visual Cue |
-|-------|-------------|------------|
-| **Empty** | No data to display (e.g., no inventory items). | Illustration + friendly message + primary CTA (e.g., “Add First Item”). |
-| **Loading** | Data fetching or operation in progress. | Skeleton UI + spinner overlay; interactive elements disabled. |
-| **Error** | API/network failure or validation error. | Red banner or toast; field‑level error messages; retry button where appropriate. |
-| **Success** | Operation completed (save, delete, adjust). | Green toast/snackbar with concise message; UI updates reflect new state instantly. |
-
----
-
-## 5. Responsive Design Considerations
-
-| Breakpoint | Layout Adjustments |
-|------------|-------------------|
-| **≥ 1024 px (desktop)** | Fixed side navigation (optional), multi‑column tables, hover tooltips, larger data density. |
-| **768 px – 1023 px (tablet landscape)** | Collapsible side menu, grid cards become two‑column, table switches to responsive “card” rows if width insufficient. |
-| **≤ 767 px (mobile portrait)** | Hamburger drawer, stacked vertical cards, list view for inventory, FAB for primary actions, larger tap targets (≥ 44 px). |
-| **High‑DPI / Retina** | Use SVG icons, 2× image assets for product photos. |
-| **Touch vs. Mouse** | Touch‑friendly controls (plus/minus buttons with adequate spacing), hover effects disabled on touch devices. |
-
----
-
-## 6. Permission‑Based UI Differences
+   - **Reject path:**
+     1. Manager must provide a **rejection reason** (free‑text).
+     2. System updates status to **“Rejected.”** and records the reason.
+     3. System notifies the Barista with the reason.
+     4. No inventory quantity change occurs.
 
-- **Owner (full control)** – sees all screens, can edit/delete items, adjust quantities, access Settings & Profile.
-- *No other roles defined yet.*
-- **Assumption:** UI will hide or disable any future role‑specific controls based on a `role` claim returned from the authentication service.
+#### 1.3. Decision Points & Alternatives
 
----
-
-## 7. Assumptions
+| Decision | Outcome | Alternative Path |
+|----------|---------|------------------|
+| **Form validation fails** | Show inline error messages; Barista must correct. | N/A |
+| **SKU not found** | Prompt Barista to **create a new product** (only Manager can create). | Barista aborts entry. |
+| **Manager does not act within 24 h** | System escalates: sends reminder email; after 48 h, escalates to Owner. | Owner can approve/reject. |
+| **Network/API outage** (DB unavailable) | Show **“Service temporarily unavailable – try again later.”** | Barista can save entry locally (browser storage) and retry later. |
 
-| # | Assumption |
+#### 1.4. Edge Cases & Error Handling
 
-|---|------------|
-| A1 | Authentication is handled via a standard email/password flow with JWT stored in `HttpOnly` cookie. |
-| A2 | Real‑time inventory updates are delivered through WebSocket (or Server‑Sent Events) so the list auto‑refreshes without manual reload. |
-| A3 | The data model includes fields: `id`, `name`, `sku`, `category`, `unit`, `quantity`, `reorderThreshold`, `supplier`, `cost`, `price`, `photoUrl`, `lastUpdated`. |
-| A4 | All UI strings are in English; i18n will be added later. |
-| A5 | The app will be hosted on a modern browser environment (Chrome ≥ 90, Edge, Safari ≥ 14). |
-| A6 | No offline capability is required for the MVP. |
-| A7 | Barcode scanning (via device camera) is **not** in scope for the initial release. |
-| A8 | Export functionality (CSV) is optional and can be added after core inventory tracking works. |
+| Situation | System Handling |
+|-----------|-----------------|
+| Duplicate pending entry for same SKU & supplier within 1 h | Detect duplicate, warn Barista, ask to **“Merge”** or **“Create separate entry.”** |
+| Received quantity exceeds a predefined **max‑receive** (e.g., 10 000 units) | Block submission, show warning, require manager override. |
+| Database write fails after manager approval | Roll back transaction, display **“Approval could not be saved – contact support.”** |
+| Email service down | Still update DB; queue notification for later delivery; UI shows **“Notification will be sent when service restores.”** |
 
----
+#### 1.5. Success Scenario
 
-## 8. Open Questions
+- Barista records 20 kg of coffee beans → manager approves → inventory quantity for “Coffee Beans – Arabica” increases from 50 kg to 70 kg.
+- Barista receives green checkmark and email confirmation.
 
-| # | Question |
+#### 1.6. Failure Scenario
 
-|---|----------|
-| Q1 | Will the owner need integration with an external POS or accounting system (e.g., QuickBooks, Square)? |
-| Q2 | Should the app support multi‑store locations, each with its own inventory pool? |
-| Q3 | Is there a requirement for role‑based reporting (e.g., sales vs. inventory) in the future? |
-| Q4 | What is the preferred method for low‑stock notifications (email, SMS, in‑app push)? |
-| Q5 | Are there any branding guidelines (colors, logo, font) that must be adhered to? |
-| Q6 | Should the “Delete Item” action require a confirmation modal with a typed SKU for safety? |
-| Q7 | Will the owner be able to upload multiple photos per SKU, or only a single thumbnail? |
-| Q8 | Is there a need for audit logs (who changed quantity and when) visible in the UI? |
+- Barista submits entry with negative quantity → UI shows **“Quantity must be a positive number.”**
+- Manager attempts to approve a pending entry but DB transaction times out → UI shows **“Unable to complete approval. Please retry.”**
 
 ---
 
-## 9. Remarks (Technical & UX Considerations)
+### 2. Low‑Stock Alert Flow
 
-- **Security:** All API calls must be authenticated; enforce CSRF protection for state‑changing requests. Quantity adjustments should be validated server‑side to prevent negative stock.
-- **Performance:** Use pagination or infinite scroll for inventory lists exceeding 200 items; cache static assets via CDN.
-- **Scalability:** Design the inventory table component to accept a data source abstraction (REST, GraphQL, WebSocket) to allow future backend swaps.
-- **Accessibility:** Ensure color contrast for low‑stock badges, provide ARIA labels for buttons, and support keyboard navigation (tab order, focus outlines).
-- **Testing:** Include unit tests for form validation, integration tests for real‑time updates, and end‑to‑end tests covering the full navigation flow.
-- **Analytics:** Optionally embed a lightweight event logger (e.g., Google Analytics) to track feature usage (e.g., how often owners adjust quantities).
-
----
+1. **Trigger:** After any inventory update (stock receipt, sale deduction), system evaluates `current_quantity` vs. `reorder_threshold`.
+2. If `current_quantity < reorder_threshold` **and** an alert has not been sent in the last 24 h for that SKU:
 
-*This specification provides a concrete, implementation‑ready blueprint for the UI of the coffee‑store management app, focusing on the owner’s real‑time inventory tracking needs while remaining flexible for future extensions.*
+   - System creates a **LowStockAlert** record.
+   - Sends **in‑app notification** + **email** to all Managers (and Owner).
+   - UI badge “⚠️ Low Stock” appears next to the product in the inventory list.
 
-## Test Scenarios – Coffee‑Store Management App (Owner‑Only, Real‑Time Inventory)
+3. Manager can **“Acknowledge”** the alert (dismiss) or **“Create Purchase Order”** (out of scope for MVP – placeholder button).
 
-> **Scope** – The app is a web‑based system used by the **store owner** on **desktop browsers** and **tablet/phone browsers**. The only required functional module for today is **real‑time inventory tracking** with full CRUD control.
+**Edge Cases**
 
-> **Assumptions** (marked **[Assumption]**) are added where the original brief did not specify details.
-> **Open Questions** (marked **[Open Question]**) highlight information that still needs clarification.
-> **Remarks** (marked **[Remark]**) note special considerations (security, scalability, UX, etc.).
+- Alert generation fails (e.g., email service down) → still create DB record; retry email in background.
+- Multiple sales cause quantity to drop below threshold multiple times within a day → only one alert per 24 h to avoid spamming.
 
 ---
 
-### 1. Critical Test Cases – Main Features
+### 3. Sales Transaction Flow (Barista → POS → System)
 
-| # | Test Case | Steps | Expected Result |
+| Actor | System | External Service |
+|-------|--------|------------------|
+| Barista | Web UI (React/Vue) | Square POS API |
+| Square | Payment processing | |
+| Database | | |
+| Notification Service | | |
 
-|---|-----------|-------|-----------------|
-| **1.1** | **Add New Inventory Item** | 1. Log in as Owner.<br>2. Navigate to **Inventory → Add Item**.<br>3. Fill required fields: *Item Name, SKU, Category, Unit Cost, Quantity, Reorder Threshold*.<br>4. Click **Save**. | New item appears in the inventory list with the exact data entered. Quantity is reflected instantly on all open sessions (desktop & tablet). |
-| **1.2** | **Edit Existing Inventory Item** | 1. Open inventory list on Desktop.<br>2. Click **Edit** on an item.<br>3. Change *Quantity* and *Unit Cost*.<br>4. Save changes. | Updated values are shown in the list on the same device **and** on any other device logged in as Owner within ≤ 2 seconds. |
-| **1.3** | **Delete Inventory Item** | 1. Select an item.<br>2. Click **Delete** and confirm. | Item disappears from the list on all devices. A toast/message “Item deleted” is shown. |
-| **1.4** | **Real‑Time Sync Across Devices** | 1. Open the app on Desktop and Tablet (both logged in as Owner).<br>2. On Desktop, edit an item’s quantity.<br>3. Observe Tablet view. | Tablet updates automatically (no manual refresh) within ≤ 2 seconds, showing the new quantity. |
-| **1.5** | **Low‑Stock Alert** | 1. Set an item’s *Reorder Threshold* to 5.<br>2. Reduce its quantity to 4 via edit. | A visual alert (e.g., red badge) and optional push notification appear on all active sessions indicating “Low stock: Item X”. |
-| **1.6** | **Search & Filter Inventory** | 1. Use the search bar to type part of an item name.<br>2. Apply a filter by Category. | List shows only items matching the search term and selected category, instantly (≤ 500 ms). |
-| **1.7** | **Responsive Layout** | 1. Open the app on a desktop browser (≥ 1024 px width).<br>2. Resize window to tablet width (≈ 768 px) and then to phone width (≈ 375 px). | UI elements re‑flow correctly: navigation collapses to a hamburger menu, tables become scrollable cards, all controls remain usable. |
-| **1.8** | **Export Inventory Report (CSV)** | 1. Click **Export → CSV**.<br>2. Download the file. | CSV file contains all inventory rows with correct headers and data matching the current view (including applied filters). |
+#### 3.1. Order Entry
 
----
+1. Barista logs in → selects **“New Sale”** from dashboard.
+2. UI shows **product catalog** (searchable, grouped by category).
+3. Barista adds items to the **order cart**:
 
-### 2. Edge Cases
+   - Select product → quantity → system auto‑fills unit price (from product record).
+   - System calculates line total = `quantity * unit_price`.
 
-| # | Test Case | Steps | Expected Result |
+4. System continuously computes **subtotal**, **tax** (local sales tax rate, e.g., 8.5 %), and **grand total**.
 
-|---|-----------|-------|-----------------|
-| **2.1** | **Maximum Quantity Value** | 1. Edit an item and set *Quantity* to the system’s maximum integer (e.g., 2,147,483,647).<br>2. Save. | System accepts the value without overflow; UI displays the number correctly. |
-| **2.2** | **Concurrent Updates** | 1. Owner opens two browser tabs (Desktop A & B).<br>2. In Tab A, change quantity to 20 and save.<br>3. In Tab B (still showing old value), change quantity to 30 and save. | The last saved value (30) persists. The system shows a **conflict warning** in Tab B before overwriting (optional optimistic locking). |
-| **2.3** | **Network Interruption During Save** | 1. Start editing an item.<br>2. Disable network (offline) before clicking **Save**.<br>3. Re‑enable network. | App queues the change, syncs automatically when back online, and shows a success toast. If sync fails, an error message with retry option appears. |
-| **2.4** | **Special Characters in Item Name** | 1. Add an item with name containing emojis, quotes, and HTML tags (`"Café ☕ ` in the name.<br>2. View inventory list. | Script is escaped; no alert pops up. |
-| **5.5** | **Transport Security** | 1. Capture network traffic with a proxy. | All API calls are over HTTPS; no plaintext credentials. |
-| **5.6** | **CSRF Protection** | 1. From another domain, attempt to POST to `/api/inventory` with a valid cookie. | Request rejected (CSRF token missing/invalid). |
+5. Barista clicks **“Proceed to Payment.”**
 
----
+#### 3.2. Payment Processing via Square
 
-### 6. Integration Test Scenarios
+1. System sends a **POST** to Square’s **CreatePayment** endpoint with:
 
-| # | Integration Point | Steps | Expected Result |
+   - `amount_money` = grand total (in cents)
+   - `source_id` = token generated by Square’s Web SDK (card, Apple Pay, etc.)
+   - `idempotency_key` = UUID for this transaction
+   - `note` = “Coffee‑store sale – Barista: {barista_id}”
 
-|---|-------------------|-------|-----------------|
-| **6.1** | **Backend API ↔ Frontend** | 1. Frontend sends `POST /api/inventory` with JSON payload.<br>2. Backend returns created item with ID. | Response status 201, body contains all fields, UI updates accordingly. |
-| **6.2** | **WebSocket / Real‑Time Engine** | 1. Open two sessions.<br>2. Perform an edit in Session A.<br>3. Verify Session B receives a `inventory:update` message. | Message format matches spec; UI updates without manual refresh. |
-| **6.3** | **Barcode Scanner (optional)** | 1. Scan a barcode that maps to an SKU.<br>2. System auto‑fills item fields. | Correct item appears; owner can adjust quantity. |
-| **6.4** | **Third‑Party Accounting Export** | 1. Export CSV and import into QuickBooks (or similar).<br>2. Verify column mapping. | Data imports without errors; amounts match. |
+2. **Square response handling:**
 
----
+   - **Success (200 OK, payment_status = COMPLETED):**
 
-### 7. User Acceptance Test (UAT) Scenarios
+     1. System records a **SaleTransaction** record with all required fields (see Data & Inputs).
+     2. System decrements inventory for each sold product (`current_quantity -= quantity`).
+     3. System triggers **low‑stock check** (see Flow 2).
+     4. UI shows **“Sale completed – receipt #XYZ”** and offers **Print/Email receipt**.
 
-| # | Scenario | Owner Actions | Success Indicator |
+   - **Failure (e.g., card declined, network error):**
 
-|---|----------|---------------|-------------------|
-| **7.1** | **Daily Inventory Check** | Open app on tablet, view low‑stock alerts, adjust quantities, save. | Owner sees updated quantities instantly on desktop; alerts disappear when thresholds are met. |
-| **7.2** | **Month‑End Report** | Export CSV, open in Excel, verify totals. | CSV contains correct rows and totals; owner can generate the report within 2 minutes. |
-| **7.3** | **Mobile Order Entry** (if future POS integration) | Use phone to add a new product received from supplier. | Item appears on desktop inventory list immediately. |
+     1. System displays **error message** returned by Square (e.g., “Card declined – insufficient funds”).
+     2. Barista can **retry** or **cancel** the transaction.
+     3. No inventory changes are persisted.
 
----
+3. If Square API times out (> 10 s) → system shows **“Payment processing is taking longer than expected. Please wait or cancel.”** with a **Cancel** button that aborts the pending request.
 
-### 8. Negative Test Cases
+#### 3.3. Post‑Sale Activities
 
-| # | Test | Steps | Expected Result |
+- **Receipt Generation:** System creates a PDF receipt (HTML → PDF) and emails it to the customer if an email address was entered.
+- **Sales Dashboard Update:** Real‑time sales totals refresh for Manager/Owner views.
 
-|---|------|-------|-----------------|
-| **8.1** | **Empty Required Fields** | Attempt to save an item with blank *Item Name*. | Validation error “Item Name is required”; item not saved. |
-| **8.2** | **Negative Quantity** | Enter `-5` for Quantity. | Validation error “Quantity cannot be negative”. |
-| **8.3** | **Exceed Max Length** | Input a 300‑character string into *Item Name* (limit assumed 100). | Validation error “Item Name exceeds maximum length”. |
-| **8.4** | **Unauthorized API Call** | Use a tool (Postman) to call `DELETE /api/inventory/123` without auth token. | 401 Unauthorized. |
-| **8.5** | **File Upload of Wrong Type** (if CSV import later) | Attempt to upload a `.txt` file as inventory import. | Error “Unsupported file type”. |
+#### 3.4. Decision Points & Alternatives
 
----
+| Decision | Outcome | Alternative |
+|----------|---------|-------------|
+| **Barista selects “Save as Draft”** (e.g., customer wants to add more items later) | System stores a **DraftSale** (no payment, no inventory change). | Draft can be resumed, edited, or discarded. |
+| **Customer pays cash** | Barista selects **“Cash”** payment method → system bypasses Square, marks transaction as **“Cash – pending reconciliation.”** | Manager later reconciles cash against bank deposits. |
+| **Tax exemption request** (e.g., corporate client) | Barista checks **“Tax‑Exempt”** box → system sets tax amount to 0 for that line. | System logs exemption reason for audit. |
 
-### 9. Regression Test Considerations
+#### 3.5. Edge Cases & Error Handling
 
-When any change is made (e.g., UI redesign, new role, additional modules), re‑run the following core set:
+| Situation | Handling |
+|-----------|----------|
+| **Product not in catalog** (SKU deleted) | UI prevents selection; if occurs during draft load, show **“Product no longer available – remove from order.”** |
+| **Inventory insufficient** (sale quantity > current_quantity) | System blocks addition, shows **“Only X units available in stock.”** |
+| **Concurrent sales** (two baristas sell the last unit simultaneously) | Use DB transaction with **SELECT … FOR UPDATE**; second transaction fails with **“Insufficient stock – please refresh.”** |
+| **Square webhook duplicate** (payment confirmation received twice) | Idempotency key prevents double recording; duplicate webhook ignored. |
+| **Tax rate change mid‑day** | Tax rate is read from a **TaxConfig** table; changes take effect on new sales only. |
 
-1. **CRUD flow** – Add, edit, delete a single item.
-2. **Real‑time sync** – Verify updates propagate across at least two devices.
-3. **Low‑stock alert** – Trigger and clear the alert.
-4. **Responsive layout** – Check on desktop, tablet, phone.
-5. **Security basics** – Unauthenticated access blocked, CSRF token required.
-6. **Performance baseline** – Page load ≤ 2 s for 5 000 items.
+#### 3.6. Success Scenario
 
-Automated UI tests (e.g., Cypress) and API contract tests (e.g., Postman/Newman) should be part of the CI pipeline.
+- Barista creates order: 2 × Latte ($4.00 each) + 1 × Croissant ($2.50).
+- System computes subtotal $10.50, tax $0.89, total $11.39.
+- Payment via Square approved.
+- SaleTransaction saved, inventory decremented, low‑stock alert generated for “Croissant” (threshold 5, now 4).
+- Receipt emailed to customer.
 
----
+#### 3.7. Failure Scenario
 
-### 10. Assumptions, Open Questions & Remarks
-
-| Type | Item |
-|------|------|
-| **[Assumption]** | The system uses a **WebSocket** (or similar) channel for real‑time updates. |
-| **[Assumption]** | Owner authentication is handled via **email/password + JWT**; token expiration is 1 hour. |
-| **[Assumption]** | Inventory data is stored in a **relational DB** with a primary key `id` (auto‑increment). |
-| **[Assumption]** | Low‑stock alerts are displayed as in‑app toast and optional browser push (if permission granted). |
-| **[Open Question]** | Will there be **multiple owners** or other roles (e.g., barista) in the future? If yes, how should permissions be scoped? |
-| **[Open Question]** | Is **offline‑first** capability required (e.g., full CRUD while no network, then sync)? |
-| **[Open Question]** | Should the app support **barcode scanning** natively, or is that a later integration? |
-| **[Remark]** | **Scalability** – Real‑time sync should be designed to handle at least **50 concurrent owners**; consider using a publish/subscribe service (e.g., Redis Pub/Sub, Socket.io). |
-| **[Remark]** | **Data integrity** – Implement optimistic locking (row version) to avoid lost updates in concurrent edit scenarios. |
-| **[Remark]** | **Accessibility** – Ensure all UI controls meet WCAG AA (focus order, ARIA labels). |
-| **[Remark]** | **Browser support** – Target latest Chrome, Edge, Safari, and Firefox; fallback for older mobile browsers is optional. |
+- Customer’s card is declined → Square returns `CARD_DECLINED`.
+- System displays **“Payment declined. Please try another card or cash.”**
+- Barista cancels order; inventory remains unchanged.
 
 ---
-
-**End of Test Scenarios Document**. Use this as the baseline for test planning, automation scripting, and sign‑off criteria for the first release of the coffee‑store inventory management module.
-
-## Bob-Ready Prompt
-
-> ⚠️ **AI GENERATION FAILED** - This section contains placeholder content based on your answers.
-> Please review and complete this section manually with specific details for your project.
-
-
-```
-Build an application with the following specifications:
-
-Goal: Coffee store  management app
-
-User Answers:
-{
-  "q1": "Store owner",
-  "q2": "Track inventory in real time (recommended)",
-  "q3": "Yes, both desktop and tablet/phone (recommended)",
-  "q4": "Owner – full control over everything (recommended)"
-}
-
-Requirements:
-- Implement core functionality as described
-- Create user-friendly interface
-- Ensure security and performance
-- Follow best practices
-
-**TODO:** Complete this prompt with specific technical requirements, constraints, and deliverables from the other sections of this specification.
 
-Please implement this step by step, starting with the foundation and building up to the complete application.
-```
+### 4. Daily Export to QuickBooks Flow
 
+| Actor | System | External Service |
+|-------|--------|------------------|
+| Scheduler (cron) | Export Service | QuickBooks Online API |
+| Owner/Manager | Email notifications | |
 
-## Coffee‑Store Management App – Implementation Plan
+#### 4.1. Scheduled Export (00:15 UTC daily)
 
-*Goal: Provide the store owner with a responsive web app that tracks coffee‑shop inventory in real‑time, usable on desktops, tablets and phones.*
+1. Scheduler triggers **ExportJob**.
+2. ExportJob queries **all SaleTransaction records** created since the previous successful export (uses `last_export_timestamp`).
+3. For each transaction, builds a **QuickBooks “SalesReceipt”** payload:
 
----
-
-### Overview
+   - Date, line items (product name, quantity, unit price), tax, total, payment method.
 
-| Aspect | Detail |
-|--------|--------|
-| **Primary User** | Store Owner (single role, full‑control) |
-| **Core Requirement** | Real‑time inventory tracking |
-| **Target Devices** | Desktop browsers, tablets, smartphones (responsive UI) |
-| **Delivery Model** | Web application (SPA) hosted on a cloud platform (e.g., AWS, Azure, GCP) with a REST/GraphQL backend and a responsive front‑end. |
-| **MVP Definition** | Owner can **view**, **add**, **update**, and **receive alerts** for inventory items in real‑time from any device. No multi‑user or POS integration in MVP. |
+4. Sends batch request to QuickBooks **CreateSalesReceipt** endpoint (OAuth2 token refreshed if needed).
 
----
+5. **Success path:**
 
-## Phase‑by‑Phase Roadmap
+   - QuickBooks returns receipt IDs → ExportJob records `quickbooks_id` on each transaction.
+   - Updates `last_export_timestamp`.
+   - Sends **email** to Owner/Manager: “Daily sales export completed – 152 receipts uploaded.”
 
-| Phase | Duration (approx.) | Key Features | Dependencies | Milestones / Deliverables |
-|-------|--------------------|--------------|--------------|---------------------------|
-| **Phase 1 – Foundations & MVP** | 4 weeks (≈ 1 sprint) | 1. Project scaffolding (repo, CI/CD, dev‑ops)  <br>2. Authentication (owner‑only, email + password, JWT)  <br>3. Responsive UI framework set‑up (e.g., React + Material‑UI or Vue + Vuetify)  <br>4. Inventory data model (items, SKU, quantity, unit, thresholds)  <br>5. CRUD API (Create/Read/Update/Delete) for inventory  <br>6. Real‑time sync via WebSockets/SignalR or Firebase Realtime DB  <br>7. Basic dashboard: list view, add/edit modal, quantity indicator  <br>8. Simple alert (toast) when quantity falls below threshold  <br>9. Automated tests for API & UI components | Backend DB (PostgreSQL / Firestore) → API → UI <br>Authentication must be ready before any protected routes. | **M1**: Repo & CI pipeline live (GitHub + GitHub Actions). <br>**M2**: Auth flow demo (login → protected dashboard). <br>**M3**: Real‑time inventory list working on two devices simultaneously. <br>**M4**: MVP sign‑off – owner can manage inventory from desktop & phone. |
-| **Phase 2 – Polish & Operational Features** | 3 weeks (≈ 1 sprint) | 1. Inventory history log (audit trail of changes)  <br>2. Bulk import/export (CSV) for initial stock load  <br>3. Low‑stock notification via email & push (service worker)  <br>4. UI enhancements: searchable/sortable table, mobile‑optimized card view  <br>5. Offline support (service‑worker cache + sync when back online)  <br>6. Role‑based UI guard (future‑proof for additional roles) | Completion of Phase 1 (API, auth, real‑time). History log needs CRUD endpoints; bulk import needs CSV parser. | **M5**: History view with filter by date/item. <br>**M6**: CSV import/export demo. <br>**M7**: Email/push low‑stock alerts working. <br>**M8**: Offline inventory edit test. |
-| **Phase 3 – Scalability & Extensions** | 4 weeks (≈ 2 sprints) | 1. Multi‑location support (optional future need)  <br>2. Supplier management (contact, lead‑time)  <br>3. Purchase order creation & status tracking  <br>4. Dashboard analytics (trend charts, turnover)  <br>5. Role expansion – staff view (read‑only)  <br>6. Performance & load testing, CDN setup  <br>7. Documentation & hand‑over (runbooks, user guide) | Phase 2 must be stable; analytics need historical data from Phase 2. Multi‑location adds a tenant identifier to all tables. | **M9**: Multi‑location inventory view. <br>**M10**: PO workflow demo. <br>**M11**: Analytics page with charts (e.g., Chart.js). <br>**M12**: Production readiness report (security, performance). |
-
----
+6. **Failure path:**
 
-### Priority Rationale
-
-| Priority | Reason |
-|----------|--------|
-| **Real‑time inventory (Phase 1)** | Core business need – owner cannot make purchasing decisions without up‑to‑date stock levels. |
-| **Authentication & security** | Owner data is sensitive; must be protected before any functional exposure. |
-| **Responsive UI** | Store owner will switch between desktop and tablet/phone throughout the day. |
-| **MVP‑only CRUD** | Keeps scope tight, enables early feedback and validation. |
-| **History & alerts (Phase 2)** | Improves operational confidence and reduces stock‑outs. |
-| **Offline support** | Store Wi‑Fi can be flaky; owner must still be able to adjust counts. |
-| **Analytics & multi‑location (Phase 3)** | Value‑added features for growth; not required for day‑to‑day operation. |
+   - API returns error (e.g., auth expired, validation error).
+   - ExportJob logs error, retries up to 3 times with exponential back‑off.
+   - After final failure, sends **alert email** with error details and a **link** to a retry button in the admin UI.
 
----
+#### 4.2. Manual Re‑Export
 
-### Dependencies & Suggested Sequence
+- Owner can click **“Re‑Export Missing Sales”** in the admin panel → system re‑processes any transactions lacking a `quickbooks_id`.
 
-1. **Infrastructure → Auth → API → UI** (Phase 1).
-2. **API extensions (history, bulk) → UI components** (Phase 2).
-3. **Data‑rich features (analytics, PO) → UI dashboards** (Phase 3).
+#### 4.3. Edge Cases
 
-All phases share a **common data layer** (PostgreSQL or Firestore). Switching databases later will require migration scripts; therefore choose the DB early.
+| Situation | Handling |
+|-----------|----------|
+| **Duplicate receipt** (QuickBooks returns “already exists”) | Skip and mark as exported; log warning. |
+| **Network outage** during export | Job fails, retries next day; alert email sent. |
+| **Large volume (> 5 000 transactions)** | Export in paginated batches of 500 to stay within API limits. |
+| **QuickBooks API rate‑limit** | Respect `Retry-After` header; pause and resume. |
 
 ---
-
-### Estimated Effort (Team of 2‑3 developers)
 
-| Phase | Person‑weeks | Effort Breakdown |
-|-------|--------------|------------------|
-| Phase 1 | 8 pw | Backend (3 pw), Frontend (3 pw), DevOps & QA (2 pw) |
-| Phase 2 | 6 pw | Backend extensions (2 pw), Frontend polish (2 pw), Testing & docs (2 pw) |
-| Phase 3 | 10 pw | New modules (6 pw), Analytics & scaling (2 pw), Documentation & hand‑over (2 pw) |
+### 5. Authentication & Session Flow (Supporting Flow)
 
-*These are rough estimates; actual velocity may vary.*
+1. **Login Page** → user enters email + password.
+2. System validates:
 
----
+   - Email exists, password hash matches.
+   - Password length ≥ 8, not expired (policy: 90‑day expiration).
 
-## Milestones & Deliverables
-
-| Milestone | Date (relative) | Deliverable | Acceptance Criteria |
-|-----------|-----------------|-------------|----------------------|
-| **M1 – Repo & CI** | End of Week 1 | Git repo, CI pipeline, Dockerfile | Build passes on every push; automated lint & unit tests run. |
-| **M2 – Auth Demo** | End of Week 2 | Login page, JWT token storage, protected route guard | Owner can log in, token refreshed, unauthorized access blocked. |
-| **M3 – Real‑time Inventory** | End of Week 3 | Dashboard showing live inventory list on two devices | Updating quantity on one device instantly reflects on the other (≤ 2 s latency). |
-| **M4 – MVP Sign‑off** | End of Week 4 | Full CRUD UI, responsive layout, low‑stock toast | Owner can add, edit, delete items; UI works on desktop 1366×768 and iPhone 13 size. |
-| **M5 – History Log** | End of Week 5 | Audit page with filters | All inventory changes are recorded with timestamp and user (owner). |
-| **M6 – CSV Import/Export** | End of Week 5 | Import wizard, export button | Owner can upload a correctly‑formatted CSV and see items added; export produces same format. |
-| **M7 – Email/Push Alerts** | End of Week 6 | Notification service, email template, service‑worker registration | Owner receives an email and a push notification when any item falls below its threshold. |
-| **M8 – Offline Edit** | End of Week 6 | Service‑worker cache, sync queue | Owner can edit inventory offline; changes sync when connection restores without data loss. |
-| **M9 – Multi‑Location** | End of Week 8 | Location selector, per‑location inventory view | Owner can switch between locations and see distinct inventories. |
-| **M10 – Purchase Orders** | End of Week 9 | PO creation form, status list | Owner can create a PO, set supplier, and mark as received; inventory auto‑increments on receipt. |
-| **M11 – Analytics Dashboard** | End of Week 10 | Charts for stock turnover, top‑selling items | Data displayed matches backend aggregates; charts are responsive. |
-| **M12 – Production Readiness** | End of Week 12 | Security audit report, load‑test results, user guide PDF | OWASP top‑10 mitigations in place, 100 concurrent users load test < 2 s response, documentation approved. |
+3. On success, server issues a **JWT** (or session cookie) with role claims (Barista, Manager, Owner).
+4. Front‑end stores token in **httpOnly secure cookie**.
+5. All subsequent API calls include the token; middleware checks role‑based permissions.
 
----
+**Failure cases:**
 
-## Risk Mitigation Strategies
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| **Real‑time sync latency / data conflicts** | Inventory mismatches could cause over‑/under‑stock | Use optimistic concurrency with version numbers; fallback to server‑side reconciliation. |
-| **Device‑specific UI bugs** | Owner may be unable to use app on tablets | Adopt a proven responsive component library; run UI tests on Chrome, Safari, Edge emulators. |
-| **Security of owner credentials** | Compromise could expose business data | Enforce strong password policy, rate‑limit login, store passwords with bcrypt, use HTTPS everywhere. |
-| **Offline edit loss** | Changes made offline could be overwritten | Queue edits locally with timestamps; on sync, apply in chronological order and flag conflicts. |
-| **Scope creep (adding staff roles early)** | Delays MVP delivery | Freeze scope for Phase 1; document “future role” placeholders but do not implement UI/logic. |
-| **CSV format errors** | Bad imports could corrupt inventory | Validate CSV on client side, provide sample template, reject rows with errors and report them. |
-| **Email deliverability** | Alerts may not reach owner | Use a reputable transactional email service (SendGrid, SES) and implement SPF/DKIM. |
+- Wrong password → generic “Invalid credentials” (no hint about which field).
+- Expired password → redirect to **“Change Password”** flow before granting access.
 
 ---
-
-## MVP Scope vs. Later Enhancements
 
-| MVP (Phase 1) | Not in MVP (Phase 2‑3) |
-|---------------|------------------------|
-| Owner login (email/password) | Social login (Google, Apple) |
-| Real‑time inventory list & CRUD | Multi‑user staff roles, permission matrix |
-| Low‑stock toast alerts | SMS alerts, automated reorder triggers |
-| Responsive UI (desktop & mobile) | Native mobile app (iOS/Android) |
-| Basic data model (items, quantity) | Supplier management, PO workflow, analytics, multi‑location, offline sync (enhanced), reporting PDFs |
+## Summary of Decision Points & Alternatives
 
-The MVP is deliberately thin: it delivers the **single most valuable capability**—real‑time inventory visibility—while keeping the codebase simple enough for rapid feedback.
+| Flow | Decision | Primary Path | Alternative Path |
+|------|----------|--------------|------------------|
+| Inventory receipt | Barista submits vs. Manager creates directly | Barista → Manager approval | Manager creates directly (future admin shortcut) |
+| Sale payment | Square (card) vs. Cash | Square API call → success → record | Cash selected → skip Square, mark as cash |
+| Low‑stock alert | Immediate vs. daily digest | Immediate email + in‑app badge | Daily digest email (future config) |
+| Export to QuickBooks | Automatic daily vs. manual only | Scheduled job runs nightly | Owner triggers manual export |
+| Authentication | Email+password only vs. SSO | Email+password (MVP) | SSO (future) |
 
 ---
 
@@ -1787,12 +1152,16 @@ The MVP is deliberately thin: it delivers the **single most valuable capability*
 | # | Assumption |
 
 |---|------------|
-| A1 | The store has a reliable internet connection for most of the day; occasional offline periods are acceptable and will be handled by the offline queue. |
-| A2 | Only one user (the owner) will be active at a time; concurrent edits are rare but must be safe. |
-| A3 | Inventory items are identified by a unique SKU or barcode that the owner can type or scan (scanning integration is out of scope for MVP). |
-| A4 | The owner prefers email for low‑stock alerts; push notifications are a secondary channel. |
-| A5 | Hosting will be on a managed cloud platform with a PostgreSQL (or Firestore) instance; no on‑premise deployment required. |
-| A6 | Compliance requirements are limited to standard data protection (GDPR/CCPA) – no PCI or health data. |
+| A1 | The Square API provides a **real‑time payment endpoint** that can be called from the web app using a client‑side token generated by Square’s Web SDK. |
+| A2 | QuickBooks Online API credentials (OAuth2 client ID/secret) are already provisioned and stored securely in the server environment. |
+| A3 | Local sales tax rate is a **single flat percentage** (e.g., 8.5 %). Complex tax rules (e.g., tax‑exempt categories) are out of scope for MVP. |
+| A4 | Email delivery is handled by a third‑party service (e.g., SendGrid) with a reliable API; failures are rare and can be retried. |
+| A5 | Users are pre‑registered by the Owner; self‑service sign‑up is not required in MVP. |
+| A6 | Daily backups are performed by the hosting platform (e.g., automated snapshots); the app only needs to trigger a **“backup completed”** log entry. |
+| A7 | All timestamps are stored in UTC; UI converts to local timezone based on user profile. |
+| A8 | The web app will be hosted on a **HTTPS‑only** domain; mixed‑content is prohibited. |
+| A9 | Inventory items are **non‑serialised** (no per‑unit tracking). |
+| A10 | The system will run on a relational DB (e.g., PostgreSQL) that supports transactions and row‑level locking. |
 
 ---
 
@@ -1801,24 +1170,1069 @@ The MVP is deliberately thin: it delivers the **single most valuable capability*
 | # | Question |
 
 |---|----------|
-| Q1 | Will the owner need integration with any existing POS or accounting system (e.g., Square, QuickBooks) in the near future? |
-| Q2 | What is the expected maximum number of distinct inventory items (e.g., < 5 000, < 20 000)? This influences DB indexing and pagination design. |
-| Q3 | Does the owner require barcode scanning directly from the web app (via camera) for fast inventory updates? |
-| Q4 | Are there any branding guidelines (logo, color palette) that must be applied from day 1? |
-| Q5 | What is the target SLA for real‑time sync latency (e.g., ≤ 2 seconds)? |
-| Q6 | Should the app support multiple languages (i18n) from the start? |
-
-*Answers to these questions will refine the design and may affect Phase 2/3 scope.*
+| Q1 | Should the manager be able to **bulk approve** multiple pending stock entries at once? |
+| Q2 | Is there a requirement for **barcode scanning** when recording stock arrivals or sales? |
+| Q3 | What is the exact **local sales tax jurisdiction** (state, city) – does it ever change, requiring a tax‑rate table? |
+| Q4 | Do we need to support **multiple locations** (e.g., more than one coffee shop) in the MVP, or is it single‑store only? |
+| Q5 | Should the system generate **PDF invoices** for sales, or is a simple receipt sufficient? |
+| Q6 | What is the **acceptable SLA** for payment processing (e.g., must complete within 5 seconds)? |
+| Q7 | Are there any **audit‑log** compliance requirements beyond recording who performed actions? |
+| Q8 | Will the Owner require **role‑based UI customization** (e.g., hide “Receive Stock” from Barista)? |
 
 ---
 
-### Next Steps
+## Remarks (Technical / UX / Business Considerations)
 
-1. **Confirm Open Questions** with the store owner.
-2. **Lock down technology stack** (React + Vite, Node + Express, PostgreSQL) and create the initial repo.
-3. **Kick‑off Sprint 1** (Phase 1) with a detailed task board (Jira/Trello).
+- **Idempotency:** All external calls (Square payment, QuickBooks export) must use idempotency keys to avoid duplicate records on retries.
+- **Performance:** Inventory updates and low‑stock checks should be performed within the same DB transaction to guarantee consistency.
+- **Scalability:** Although MVP is moderate, design the API layer to be stateless so horizontal scaling is possible later.
+- **Security:** Store passwords with a strong hashing algorithm (bcrypt/argon2). Enforce HTTPS, set `SameSite=Strict` on cookies, and implement CSRF protection.
+- **Accessibility:** Ensure all UI components meet WCAG 2.1 AA (focus order, ARIA labels for forms).
+- **Testing:** Provide unit tests for business rules (stock threshold, tax calculation) and integration tests for Square/QuickBooks API mocks.
+- **Logging & Monitoring:** Capture key events (login, sale completion, export success/failure) in a centralized log (e.g., ELK) for troubleshooting.
 
-With this plan, the development team has a clear, testable roadmap that delivers the essential inventory‑tracking capability quickly while laying a solid foundation for future growth.
+---
+
+*The above flows are ready for implementation by the development team. Adjustments can be made once the open questions are answered.*
+
+## Data Model – Coffee‑Store Management App (MVP)
+
+> **Scope** – Web‑only application, MVP includes **Inventory Management** and **Sales Tracking** with integration to **Square POS** and **QuickBooks** export.
+> **Audience** – Backend developers, DBAs, and API designers.
+
+---
+
+### 1. Entity Overview
+
+| Entity | Purpose (short description) |
+|--------|-----------------------------|
+| **User** | Employees that log in to the app (Barista, Manager, Owner). |
+| **Role** | Pre‑defined permission set (Barista, Manager, Owner). |
+| **Supplier** | External vendor that provides coffee‑store products. |
+| **InventoryItem** | Master record for every product stocked (beans, milk, pastries, etc.). |
+| **StockArrival** | Record of a physical delivery of items (created by Barista, approved by Manager). |
+| **InventoryAdjustment** | Audit record for any manual change to quantity (e.g., spoilage, write‑off). |
+| **SaleTransaction** | One complete sale captured from the app (order → payment). |
+| **SaleItem** | Line‑item details belonging to a SaleTransaction. |
+| **LowStockAlert** | System‑generated notification when quantity < reorder threshold. |
+| **TaxReport** | Periodic aggregation of tax‑able sales (used for filing). |
+| **ExportLog** | Log of each daily export to QuickBooks (status, timestamp). |
+| **POSIntegrationLog** | Log of every request/response to Square API (for troubleshooting). |
+
+---
+
+### 2. Detailed Entity Definitions
+
+#### 2.1 User
+
+| Attribute | Data Type / Format | Required? | Validation / Constraints | Notes |
+|-----------|-------------------|-----------|--------------------------|-------|
+| `id` | UUID (PK) | Yes | Auto‑generated, immutable | Primary Key |
+| `email` | VARCHAR(254) | Yes | Unique, RFC‑5322 email format | Login identifier |
+| `password_hash` | CHAR(60) | Yes | BCrypt hash, min 8‑char original password | Never store plain text |
+| `first_name` | VARCHAR(50) | Yes | – | – |
+| `last_name` | VARCHAR(50) | Yes | – | – |
+| `role_id` | UUID (FK → Role.id) | Yes | – | Determines permissions |
+| `is_active` | BOOLEAN | Yes | Default = true | Soft‑delete flag |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() | – |
+| `updated_at` | TIMESTAMP WITH TZ | Yes | Auto‑update on change | – |
+| `password_last_changed` | DATE | Yes | Must be ≤ 90 days ago (policy) | Used for expiration |
+
+**Indexes / Keys**
+- Unique index on `email`.
+- Index on `role_id` for permission look‑ups.
+
+---
+
+#### 2.2 Role
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `name` | VARCHAR(20) | Yes | Unique (`'Barista'`, `'Manager'`, `'Owner'`) |
+| `description` | TEXT | No | – |
+
+*Permissions are hard‑coded in the application layer based on role name (see Remarks).*
+
+---
+
+#### 2.3 Supplier
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `name` | VARCHAR(100) | Yes | Unique |
+| `contact_email` | VARCHAR(254) | No | Email format |
+| `phone` | VARCHAR(20) | No | E.164 format recommended |
+| `address` | TEXT | No | – |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `updated_at` | TIMESTAMP WITH TZ | Yes | Auto‑update |
+
+**Indexes** – Unique index on `name`.
+
+---
+
+#### 2.4 InventoryItem
+
+| Attribute | Data Type | Required? | Constraints / Validation |
+|-----------|-----------|-----------|--------------------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `sku` | VARCHAR(30) | Yes | Unique, alphanumeric |
+| `name` | VARCHAR(150) | Yes | – |
+| `unit_price` | DECIMAL(10,2) | Yes | ≥ 0.00 |
+| `supplier_id` | UUID (FK → Supplier.id) | Yes | – |
+| `current_quantity` | INTEGER | Yes | ≥ 0 |
+| `reorder_threshold` | INTEGER | Yes | ≥ 0 |
+| `is_active` | BOOLEAN | Yes | Default = true (soft delete) |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `updated_at` | TIMESTAMP WITH TZ | Yes | Auto‑update |
+
+**Indexes**
+- Unique index on `sku`.
+- Index on `supplier_id`.
+- Composite index on (`is_active`, `current_quantity`) for low‑stock queries.
+
+---
+
+#### 2.5 StockArrival
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `inventory_item_id` | UUID (FK → InventoryItem.id) | Yes | – |
+| `received_quantity` | INTEGER | Yes | > 0 |
+| `received_at` | TIMESTAMP WITH TZ | Yes | When the barista logged the arrival |
+| `recorded_by_user_id` | UUID (FK → User.id) | Yes | Must be a Barista role |
+| `approved_by_user_id` | UUID (FK → User.id) | No | Null until Manager approves |
+| `approved_at` | TIMESTAMP WITH TZ | No | Null until approved |
+| `notes` | TEXT | No | – |
+
+**Business Rule** – Inventory quantity is **not** increased until `approved_by_user_id` is set (Manager approval).
+
+**Indexes** – Index on `inventory_item_id`, `approved_by_user_id`.
+
+---
+
+#### 2.6 InventoryAdjustment
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `inventory_item_id` | UUID (FK → InventoryItem.id) | Yes | – |
+| `adjustment_quantity` | INTEGER | Yes | Positive for addition, negative for subtraction |
+| `reason` | VARCHAR(200) | Yes | E.g., “spoilage”, “audit correction” |
+| `performed_by_user_id` | UUID (FK → User.id) | Yes | Must be Manager or Owner |
+| `performed_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `related_stock_arrival_id` | UUID (FK → StockArrival.id) | No | If adjustment stems from a specific arrival |
+
+**Indexes** – Index on `inventory_item_id`.
+
+---
+
+#### 2.7 SaleTransaction
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `order_number` | VARCHAR(20) | Yes | Unique per day (e.g., `20230615-001`) |
+| `barista_user_id` | UUID (FK → User.id) | Yes | Must be Barista role |
+| `total_before_tax` | DECIMAL(10,2) | Yes | ≥ 0 |
+| `tax_amount` | DECIMAL(10,2) | Yes | Calculated using local tax rate |
+| `total_amount` | DECIMAL(10,2) | Yes | = `total_before_tax` + `tax_amount` |
+| `payment_method` | ENUM('Square Card', 'Square Cash', 'Cash', 'Other') | Yes | Must match Square response |
+| `square_payment_id` | VARCHAR(50) | Yes | Returned by Square API |
+| `status` | ENUM('Pending', 'Completed', 'Failed') | Yes | Default = Pending → Completed after POS confirmation |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `updated_at` | TIMESTAMP WITH TZ | Yes | Auto‑update |
+
+**Indexes**
+- Unique index on `order_number`.
+- Index on `barista_user_id`.
+- Index on `created_at` (for daily reports).
+
+---
+
+#### 2.8 SaleItem (line items)
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `sale_transaction_id` | UUID (FK → SaleTransaction.id) | Yes | – |
+| `inventory_item_id` | UUID (FK → InventoryItem.id) | Yes | – |
+| `quantity` | INTEGER | Yes | > 0 |
+| `unit_price` | DECIMAL(10,2) | Yes | Snapshot of price at sale time |
+| `line_total` | DECIMAL(10,2) | Yes | = `quantity` * `unit_price` |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+
+**Indexes** – Composite index on (`sale_transaction_id`, `inventory_item_id`).
+
+---
+
+#### 2.9 LowStockAlert
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `inventory_item_id` | UUID (FK → InventoryItem.id) | Yes | – |
+| `triggered_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `notified_manager_user_id` | UUID (FK → User.id) | Yes | Must be a Manager |
+| `is_resolved` | BOOLEAN | Yes | Default = false |
+| `resolved_at` | TIMESTAMP WITH TZ | No | Set when manager acknowledges |
+
+**Business Rule** – Generated automatically when `current_quantity` < `reorder_threshold`.
+
+**Indexes** – Index on `inventory_item_id`, `is_resolved`.
+
+---
+
+#### 2.10 TaxReport (periodic)
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `period_start` | DATE | Yes | Inclusive |
+| `period_end` | DATE | Yes | Inclusive |
+| `total_taxable_sales` | DECIMAL(12,2) | Yes | Sum of `total_before_tax` |
+| `total_tax_collected` | DECIMAL(12,2) | Yes | Sum of `tax_amount` |
+| `generated_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `generated_by_user_id` | UUID (FK → User.id) | Yes | Owner or Manager |
+
+**Indexes** – Unique index on (`period_start`, `period_end`).
+
+---
+
+#### 2.11 ExportLog (QuickBooks)
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `export_date` | DATE | Yes | Unique per day |
+| `status` | ENUM('Success', 'Failed') | Yes | – |
+| `detail_message` | TEXT | No | Error description if failed |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+| `initiated_by_user_id` | UUID (FK → User.id) | Yes | Usually Owner/Manager |
+
+**Indexes** – Unique index on `export_date`.
+
+---
+
+#### 2.12 POSIntegrationLog
+
+| Attribute | Data Type | Required? | Constraints |
+|-----------|-----------|-----------|-------------|
+| `id` | UUID (PK) | Yes | Auto‑generated |
+| `sale_transaction_id` | UUID (FK → SaleTransaction.id) | Yes | – |
+| `request_payload` | JSONB | Yes | Raw request sent to Square |
+| `response_payload` | JSONB | Yes | Raw response from Square |
+| `http_status` | SMALLINT | Yes | e.g., 200, 400 |
+| `created_at` | TIMESTAMP WITH TZ | Yes | Default = now() |
+
+**Indexes** – Index on `sale_transaction_id`.
+
+---
+
+### 3. Relationships Summary
+
+| From Entity | Relationship | To Entity | Cardinality |
+|-------------|--------------|-----------|-------------|
+| User | **has** | Role | Many‑to‑One (each user → one role) |
+| Supplier | **supplies** | InventoryItem | One‑to‑Many |
+| InventoryItem | **receives** | StockArrival | One‑to‑Many |
+| StockArrival | **approved by** | User (Manager) | Optional One‑to‑One |
+| InventoryItem | **adjusted by** | InventoryAdjustment | One‑to‑Many |
+| InventoryItem | **has** | LowStockAlert | One‑to‑Many |
+| SaleTransaction | **created by** | User (Barista) | Many‑to‑One |
+| SaleTransaction | **contains** | SaleItem | One‑to‑Many |
+| SaleItem | **references** | InventoryItem | Many‑to‑One |
+| SaleTransaction | **logged in** | POSIntegrationLog | One‑to‑Many |
+| SaleTransaction | **exported via** | ExportLog (indirect – daily batch) | Many‑to‑One (batch) |
+| TaxReport | **generated from** | SaleTransaction | Many‑to‑One (aggregated) |
+| User | **receives** | LowStockAlert (Manager) | One‑to‑Many |
+
+---
+
+### 4. Data Constraints & Validations
+
+| Entity | Constraint | Description |
+|--------|------------|-------------|
+| **User.email** | UNIQUE, NOT NULL, format check | Prevent duplicate logins. |
+| **User.password_hash** | NOT NULL | Must be BCrypt with cost ≥ 12. |
+| **User.password_last_changed** | CHECK (password_last_changed >= CURRENT_DATE - INTERVAL '90 days') | Enforce expiration policy. |
+| **InventoryItem.sku** | UNIQUE, NOT NULL | Business identifier. |
+| **InventoryItem.current_quantity** | CHECK (current_quantity >= 0) | No negative stock. |
+| **StockArrival.approved_at** | CHECK (approved_by_user_id IS NOT NULL ⇔ approved_at IS NOT NULL) | Consistent approval data. |
+| **SaleTransaction.total_amount** | CHECK (total_amount = total_before_tax + tax_amount) | Financial integrity. |
+| **SaleItem.quantity** | CHECK (quantity > 0) | Valid line items. |
+| **LowStockAlert.is_resolved** | DEFAULT false | Must be manually cleared. |
+| **ExportLog.export_date** | UNIQUE | One export per day. |
+| **TaxReport.period_start ≤ period_end** | CHECK | Valid reporting period. |
+| **User.role_id** | FK with ON DELETE RESTRICT | Prevent orphaned users. |
+| **All FK columns** | ON UPDATE CASCADE, ON DELETE RESTRICT | Preserve referential integrity. |
+
+---
+
+### 5. Indexes, Keys & Uniqueness
+
+| Table | Index / Key | Columns | Type |
+|-------|-------------|---------|------|
+| User | PK | `id` | Primary |
+| User | UQ | `email` | Unique |
+| Role | PK | `id` | Primary |
+| Role | UQ | `name` | Unique |
+| Supplier | PK | `id` | Primary |
+| Supplier | UQ | `name` | Unique |
+| InventoryItem | PK | `id` | Primary |
+| InventoryItem | UQ | `sku` | Unique |
+| InventoryItem | IDX | (`is_active`, `current_quantity`) | B‑tree (low‑stock query) |
+| StockArrival | PK | `id` | Primary |
+| StockArrival | IDX | `inventory_item_id` | B‑tree |
+| InventoryAdjustment | PK | `id` | Primary |
+| SaleTransaction | PK | `id` | Primary |
+| SaleTransaction | UQ | `order_number` | Unique |
+| SaleTransaction | IDX | `created_at` | B‑tree (daily reports) |
+| SaleItem | PK | `id` | Primary |
+| SaleItem | IDX | (`sale_transaction_id`, `inventory_item_id`) | Composite |
+| LowStockAlert | PK | `id` | Primary |
+| LowStockAlert | IDX | `inventory_item_id` | B‑tree |
+| ExportLog | PK | `id` | Primary |
+| ExportLog | UQ | `export_date` | Unique |
+| POSIntegrationLog | PK | `id` | Primary |
+| POSIntegrationLog | IDX | `sale_transaction_id` | B‑tree |
+
+---
+
+### 6. Ownership / Permission Boundaries
+
+| Entity | Who can **create** | Who can **read** | Who can **update** | Who can **delete** |
+|--------|-------------------|------------------|--------------------|--------------------|
+| User | Owner | Owner, Manager | Owner (self‑service for password) | Owner (soft‑delete) |
+| Role | Owner | All (read‑only) | Owner | Owner |
+| Supplier | Manager, Owner | Manager, Owner | Manager, Owner | Owner (soft) |
+| InventoryItem | Manager, Owner | Barista (view), Manager, Owner | Manager, Owner | Owner (soft) |
+| StockArrival | Barista | Manager, Owner | Manager (approve) | Owner (soft) |
+| InventoryAdjustment | Manager, Owner | Manager, Owner | Manager, Owner | Owner (soft) |
+| SaleTransaction | Barista (via app) | Barista (own), Manager, Owner | System (status updates) | Owner (archival only) |
+| SaleItem | System (via transaction) | Same as SaleTransaction | System | Owner (archival) |
+| LowStockAlert | System | Manager | Manager (resolve) | Owner (purge after resolution) |
+| TaxReport | System (batch) | Manager, Owner | System (regenerate) | Owner (archive) |
+| ExportLog | System (batch) | Manager, Owner | System | Owner (purge after retention) |
+| POSIntegrationLog | System | Manager, Owner | System | Owner (purge) |
+
+*Implementation note:* Enforce these rules in the service layer using the `role` field; DB‑level row‑level security (RLS) can be added later for multi‑tenant extensions.
+
+---
+
+### 7. Data Lifecycle
+
+| Entity | Creation | Update | Archive / Retention | Deletion |
+|--------|----------|--------|---------------------|----------|
+| User | On‑boarding (owner) | Password change, profile edit | Keep for 7 years after deactivation (per retention policy) | Soft‑delete (`is_active = false`) |
+| InventoryItem | Manager adds new product | Quantity changes via StockArrival approval or Adjustment | Retain for 7 years | Soft‑delete (set `is_active = false`) |
+| StockArrival | Barista logs arrival | Manager approval | Keep for 7 years | Hard delete not allowed |
+| SaleTransaction / SaleItem | Barista creates order → POS confirmation | Status changes (Pending → Completed) | Retain for 7 years (legal) | Hard delete prohibited |
+| LowStockAlert | System auto‑creates | Manager resolves | Keep until resolved, then purge after 30 days | Auto‑purge |
+| TaxReport | Daily/weekly batch job | Regeneration if needed | Keep for 7 years | Hard delete after retention |
+| ExportLog | Daily export job | Status update only | Keep for 7 years | Hard delete after retention |
+| POSIntegrationLog | Each POS call | None | Keep for 90 days (debug) | Auto‑purge after 90 days |
+
+---
+
+### 8. Assumptions
+
+| # | Assumption |
+
+|---|------------|
+| A1 | **Square POS** provides a synchronous API that returns a payment ID instantly; the app will wait for the response before marking a sale as `Completed`. |
+| A2 | **Local sales tax** is a single rate (e.g., 8.5 %). The rate is stored in a configuration table (not shown) and applied uniformly. |
+| A3 | **QuickBooks** daily export is a simple CSV upload via QuickBooks API; the ExportLog records success/failure. |
+| A4 | The system is **single‑tenant** (one coffee store). Multi‑tenant support is out of scope for MVP. |
+| A5 | All timestamps are stored with timezone (`TIMESTAMP WITH TZ`) to avoid daylight‑saving issues. |
+| A6 | Password expiration is enforced by prompting the user on login; the DB only stores the last‑changed date. |
+| A7 | “Soft delete” means the row stays in the DB but is excluded from normal queries via `is_active = true` filter. |
+| A8 | No offline/edge‑case handling for network failures with Square; failed payments will be logged and the sale marked `Failed`. |
+
+---
+
+### 9. Open Questions
+
+| # | Question |
+
+|---|----------|
+| Q1 | What is the exact **local sales tax rate** and are there tax‑exempt product categories (e.g., food vs. merchandise)? |
+| Q2 | Should the **order number** reset each day (`YYYYMMDD-###`) or be globally unique? |
+| Q3 | Are there any **audit‑log** requirements beyond the POSIntegrationLog (e.g., who edited inventory quantities manually)? |
+| Q4 | Will the **owner** have the ability to configure the reorder threshold per item, or is that fixed by the manager? |
+| Q5 | Is there a need for **batch import** of initial inventory data (CSV upload) during go‑live? |
+| Q6 | Should the **low‑stock alert** be sent via email, SMS, or in‑app notification? (Implementation of delivery channel is not defined yet.) |
+| Q7 | Are there any **regional data‑privacy** regulations (e.g., GDPR) that affect how user passwords or personal data are stored? |
+
+---
+
+### 10. Remarks
+
+* **Performance** – Low‑stock queries run frequently; the composite index on `InventoryItem (is_active, current_quantity)` plus a materialized view of items below threshold can keep alert generation fast.
+* **Scalability** – With only a single store, a relational DB (PostgreSQL) is sufficient. If future multi‑store expansion is planned, add a `store_id` tenant column to all tables and enforce row‑level security.
+* **Security** – Store passwords with BCrypt (cost ≥ 12). Use HTTPS everywhere. Consider adding **account lockout** after 5 failed attempts (not in data model).
+* **Backup / Retention** – Daily backups must be retained for at least 7 years; implement a scheduled backup job and verify restore procedures.
+* **Integration Errors** – POSIntegrationLog will help troubleshoot Square failures; consider a retry queue for transient errors (outside data model).
+* **Testing** – Write unit tests for:
+  * StockArrival approval flow updates `InventoryItem.current_quantity`.
+  * SaleTransaction creation validates tax calculation.
+  * LowStockAlert generation when quantity drops below threshold.
+  * ExportLog uniqueness per day.
+
+---
+
+*Prepared for the development team to start schema design and API contract definition.*
+
+## Test Scenarios for Coffee‑Store Management Web App (MVP)
+
+> **Scope** – Web‑only application (browser). Core MVP features: **Inventory Management**, **Sales Tracking**, **Square POS integration**, **Daily export to QuickBooks**, **Low‑stock alerts**, **Tax calculation**, **Role‑based access**, **Authentication**, **Data‑retention & backup**.
+
+> **Notation** –
+> • **TC‑\<Feature\>-\<#\>** – Test‑case identifier
+> • **Pre‑condition** – state that must exist before the steps are executed
+> • **Steps** – ordered actions the tester performs
+> • **Expected Result** – what the system must do for the test to pass
+
+---
+
+### 1. Critical Test Cases (Core Functionality)
+
+| ID | Title | Description | Steps | Expected Result |
+|----|-------|-------------|-------|-----------------|
+| TC‑INV‑01 | Add New Stock Arrival (Barista) | Barista records a delivery; manager must approve before inventory changes. | 1. Log in as **Barista**.<br>2. Navigate to **Inventory → Receive Stock**.<br>3. Fill required fields (product, quantity, supplier).<br>4. Submit. | System creates a **Pending Stock** record, visible to manager, **inventory quantity unchanged**. |
+| TC‑INV‑02 | Approve Stock Arrival (Manager) | Manager reviews and approves pending stock. | 1. Log in as **Manager**.<br>2. Open **Pending Stock** list.<br>3. Select the record from TC‑INV‑01 and click **Approve**. | Inventory quantity for the product **increments** by the received amount; pending record status changes to **Approved**. |
+| TC‑INV‑03 | Prevent Barista Edit of Inventory | Verify barista cannot edit inventory quantities directly. | 1. Log in as **Barista**.<br>2. Attempt to edit a product’s **Current Quantity** field. | **Edit control is disabled**; UI shows “Read‑only – manager approval required”. |
+| TC‑INV‑04 | Low‑Stock Alert Trigger | System notifies manager when quantity < reorder threshold. | 1. Ensure a product’s **Current Quantity** = 5 and **Reorder Threshold** = 10.<br>2. Approve a stock receipt that reduces quantity to 4 (or manually adjust). | Manager receives an **email & in‑app notification** “Low stock: \<Product\>”. |
+| TC‑SALE‑01 | Record Sale via Integrated Square POS | Barista creates an order; payment processed through Square; sale saved. | 1. Log in as **Barista**.<br>2. Open **New Sale**.<br>3. Add items, quantities.<br>4. Click **Submit Order**.<br>5. Square payment UI appears; complete payment with test card.<br>6. Confirm payment success. | Sale record is created with correct items, quantities, tax, total, **payment status = Paid**, and **Square transaction ID** stored. |
+| TC‑SALE‑02 | Tax Calculation Accuracy | Verify correct tax applied per local rate (e.g., 8.5%). | 1. Create a sale of a single item priced $4.00.<br>2. System calculates tax = $0.34 (rounded per rule).<br>3. Total = $4.34. | Tax amount displayed = $0.34, total = $4.34, and stored values match. |
+| TC‑EXPORT‑01 | Daily Export to QuickBooks | System exports yesterday’s sales to QuickBooks automatically. | 1. Set system date to **2026‑05‑15** (or mock).<br>2. Ensure several sales exist for **2026‑05‑14**.<br>3. Run the **Export Job** (or wait for scheduled run). | QuickBooks receives a **Journal Entry** (or Sales Receipt) for each transaction; no duplicate exports; log shows “Export successful”. |
+| TC‑AUTH‑01 | Email + Password Login (Password Policy) | Verify login respects minimum length and expiration. | 1. Attempt login with password **7 characters** → expect failure.<br>2. Attempt login with password **8+ characters** → expect success.<br>3. Simulate password older than expiration period (e.g., 90 days). | Step 1: “Password must be at least 8 characters”. Step 2: Successful login. Step 3: Prompt to **reset password**. |
+| TC‑DATA‑01 | Data Retention – 7‑Year Archive | Ensure sales/inventory data older than 7 years is still retained (not deleted). | 1. Insert a mock sale dated **2019‑05‑01** (7+ years ago).<br>2. Run the **Retention Cleanup** job. | Record **remains** in database; job logs “Retention check – record kept (age < 7 years)”. |
+| TC‑BACKUP‑01 | Daily Backup Creation | Verify backup file is generated each day. | 1. Trigger the **Backup Scheduler** for today’s date.<br>2. Check backup storage location. | Backup file **named with date** exists, size > 0, and checksum matches source DB. |
+
+---
+
+### 2. Edge‑Case Test Cases
+
+| ID | Title | Edge Condition | Steps | Expected Result |
+|----|-------|----------------|-------|-----------------|
+| TC‑INV‑05 | Zero‑Quantity Receive | Barista enters **0** as received quantity. | 1. Log in as Barista.<br>2. Attempt to submit a stock receipt with quantity = 0. | System **rejects** with validation message “Quantity must be greater than 0”. |
+| TC‑INV‑06 | Duplicate SKU Entry | Attempt to create a new product with an existing SKU. | 1. Manager adds a product using SKU **ABC123** that already exists. | System shows error “SKU already exists”. |
+| TC‑SALE‑03 | Partial Payment Failure | Square declines the card (insufficient funds). | 1. Barista submits order.<br>2. Use test card that triggers decline.<br>3. Observe response. | Sale is **not recorded**, UI shows “Payment declined – please retry”. |
+| TC‑SALE‑04 | High‑Volume Order | Order contains 200 line items (unlikely but possible). | 1. Barista creates a sale with 200 items.<br>2. Submit order. | System processes within acceptable time (<3 s) and records all items correctly; no UI crash. |
+| TC‑EXPORT‑02 | QuickBooks API Rate‑Limit | Simulate QuickBooks returning HTTP 429. | 1. Trigger export when API limit is reached (mock). | Export job **retries** with exponential back‑off, logs “Rate limit – retry scheduled”. |
+| TC‑AUTH‑02 | Account Lockout | 5 consecutive failed login attempts. | 1. Attempt login with wrong password 5 times.<br>2. Try correct password. | Account is **locked**; login denied with message “Account locked – contact admin”. |
+| TC‑LOWSTOCK‑01 | Reorder Threshold = 0 | Product configured with threshold 0 (edge). | 1. Manager sets threshold to 0.<br>2. Reduce quantity by any amount. | System **does not send** low‑stock alert (threshold 0 means never alert). |
+| TC‑DATA‑02 | Leap‑Year Date Handling | Export sales on Feb 29 of a leap year. | 1. Create a sale dated **2024‑02‑29**.<br>2. Run daily export for **2024‑03‑01**. | Export includes the Feb 29 sale correctly. |
+
+---
+
+### 3. Acceptance Criteria (per Major Feature)
+
+| Feature | Acceptance Criteria |
+|---------|---------------------|
+| **Inventory Management** | • Barista can create *Pending Stock* records.<br>• Manager can approve/reject pending records.<br>• Approved records update **Current Quantity** atomically.<br>• Low‑stock alerts fire **once per threshold breach**.<br>• All required fields (name, SKU, price, supplier, quantity, threshold) are mandatory and validated. |
+| **Sales Tracking** | • Barista can create a sale, select items, and submit.<br>• Payment is processed via Square in real time; failure aborts sale.<br>• Tax is calculated per configured rate and stored.<br>• Sale record includes all required fields (items, qty, price, tax, total, barista ID, payment method, timestamp). |
+| **POS Integration (Square)** | • Order data is sent to Square **before** finalizing sale.<br>• Transaction ID from Square is stored.<br>• Errors from Square are surfaced to the barista with retry option. |
+| **QuickBooks Export** | • Export runs automatically each day at 02:00 UTC.<br>• All sales from the previous day are exported exactly once.<br>• Export log shows success/failure per batch.<br>• Export format complies with QuickBooks API (SalesReceipt). |
+| **Role‑Based Access** | • Barista: view inventory, create sales, view own sales.<br>• Manager: edit inventory, approve stock, view all sales.<br>• Owner: full CRUD on all data and settings.<br>• UI hides/ disables unauthorized actions. |
+| **Security & Auth** | • Email + password login with minimum 8‑character rule.<br>• Password expiration after 90 days; forced reset.<br>• Account lockout after 5 failed attempts.<br>• All API calls over HTTPS; JWT session token with 1‑hour expiry. |
+| **Data Retention & Backup** | • Sales & inventory retained ≥ 7 years.<br>• Daily automated backup stored in secure off‑site bucket.<br>• Backup integrity verified via checksum. |
+
+---
+
+### 4. Performance Test Scenarios
+
+| ID | Title | Load Condition | Steps | Expected Result |
+|----|-------|----------------|-------|-----------------|
+| PERF‑INV‑01 | Bulk Stock Approval | Approve **500** pending stock records simultaneously. | 1. Generate 500 pending records.<br>2. Manager selects “Approve All”. | System processes all approvals within **30 s**; DB transaction time < 200 ms per record. |
+| PERF‑SALE‑01 | Concurrent Sales | **50** baristas submit sales at the same time. | 1. Simulate 50 parallel sessions each creating a sale.<br>2. Observe response times. | 95 % of requests complete < 2 s; no data loss or race conditions. |
+| PERF‑EXPORT‑01 | QuickBooks Export Volume | Export **10,000** sales in one daily batch. | 1. Populate 10k sales for previous day.<br>2. Trigger export job. | Export completes within **5 min**; API rate‑limit handling works; no duplicate entries. |
+| PERF‑UI‑01 | Page Load Time | Load **Inventory List** page with 5,000 items. | 1. Access page after data seeding.<br>2. Measure time to first paint. | Page renders **< 3 s**; pagination works; server response < 500 ms. |
+
+---
+
+### 5. Security Test Scenarios
+
+| ID | Title | Threat Vector | Steps | Expected Result |
+|----|-------|---------------|-------|-----------------|
+| SEC‑AUTH‑01 | Brute‑Force Protection | Repeated login attempts. | 1. Attempt login with wrong password 100 times from same IP.<br>2. Observe lockout behavior. | After 5 attempts, account locked; further attempts blocked; IP may be throttled. |
+| SEC‑XSS‑01 | Reflected XSS in Product Name | Input malicious script in product name. | 1. Manager creates product with name ``.<br>2. View inventory page as Barista. | Script is **escaped**; no alert pops up. |
+| SEC‑CSRF‑01 | CSRF on Stock Approval | Attempt cross‑site request to approve stock. | 1. Craft a hidden form that POSTs to `/inventory/approve` with a valid stock ID.<br>2. Submit from another domain while logged in as Manager. | Request is rejected due to missing **CSRF token**. |
+| SEC‑DATA‑01 | Data Leakage in Export | Verify exported file does not contain sensitive fields (e.g., passwords). | 1. Run QuickBooks export.<br>2. Inspect generated payload. | Export contains only required sales fields; no user credentials. |
+| SEC‑TLS‑01 | Enforce HTTPS | Access the app via HTTP. | 1. Open `http://app.coffeestore.com`. | Browser automatically redirects to **HTTPS**; no mixed‑content warnings. |
+
+---
+
+### 6. Integration Test Scenarios
+
+| ID | Title | Integrated System | Steps | Expected Result |
+|----|-------|-------------------|-------|-----------------|
+| INT‑SQ‑01 | Square Order Creation | Square Orders API | 1. Submit a sale in the app.<br>2. Verify a corresponding **Create Order** request is sent to Square.<br>3. Check Square dashboard for the order. | Order appears in Square with correct line items and total. |
+| INT‑SQ‑02 | Square Payment Capture | Square Payments API | 1. Complete payment using test card.<br>2. Verify **Capture** request and response. | Payment status = **COMPLETED**; transaction ID stored. |
+| INT‑QB‑01 | QuickBooks Sales Receipt | QuickBooks API (v3) | 1. Run daily export.<br>2. Query QuickBooks for new Sales Receipts. | Receipts match sales data (items, amounts, tax). |
+| INT‑DB‑01 | Database Transaction Integrity | PostgreSQL (or chosen RDBMS) | 1. Simulate failure after inventory update but before sale commit.<br>2. Verify rollback. | No partial data persisted; both inventory and sale remain unchanged. |
+
+---
+
+### 7. User Acceptance Test (UAT) Scenarios
+
+| ID | Scenario | Business Goal | Steps | Acceptance |
+|----|----------|---------------|-------|------------|
+| UAT‑01 | Daily Operations – Barista | Verify barista can process orders without technical assistance. | 1. Log in as Barista.<br>2. Take an order, submit, complete payment.<br>3. Check inventory view updates (read‑only). | Barista completes order in ≤ 2 min; no errors; inventory reflects new quantity after manager approval. |
+| UAT‑02 | Manager Stock Replenishment | Ensure manager can maintain inventory levels efficiently. | 1. Log in as Manager.<br>2. Review low‑stock alerts.<br>3. Approve pending stock arrivals.<br>4. Adjust reorder thresholds. | Manager sees alerts, approves, and inventory quantities update instantly; thresholds saved. |
+| UAT‑03 | Owner Reporting | Owner can generate tax report and export data. | 1. Log in as Owner.<br>2. Navigate to **Reports → Tax Summary** for a month.<br>3. Export to CSV.<br>4. Verify QuickBooks export log. | Report shows correct totals, CSV downloads, and export log shows “Success”. |
+| UAT‑04 | Password Expiration Workflow | Validate password policy enforcement. | 1. Log in with a password older than 90 days.<br>2. System forces password change.<br>3. Set new password meeting policy. | User redirected to **Change Password** page; after change, login succeeds. |
+
+---
+
+### 8. Negative Test Cases
+
+| ID | Title | Negative Condition | Steps | Expected Result |
+|----|-------|--------------------|-------|-----------------|
+| NEG‑INV‑01 | Reject Negative Quantity | Quantity = **‑5** on stock receipt. | Attempt to submit receipt. | Validation error “Quantity must be positive”. |
+| NEG‑SALE‑01 | Cancel Payment Mid‑Flow | Barista initiates payment, then clicks **Cancel** in Square UI. | Submit order, cancel payment. | Sale is **not recorded**; UI shows “Payment cancelled”. |
+| NEG‑EXPORT‑01 | Export Failure – No Internet | Disconnect network before scheduled export. | Trigger export job. | Job fails gracefully, logs “Network error”, retries next day. |
+| NEG‑AUTH‑02 | Invalid Email Format | Attempt login with `user@@domain.com`. | Submit login form. | Validation error “Enter a valid email address”. |
+| NEG‑ROLE‑01 | Unauthorized Access Attempt | Barista manually navigates to **/inventory/edit** URL. | Direct URL entry. | System returns **403 Forbidden**; UI shows “Access denied”. |
+
+---
+
+### 9. Regression Test Considerations
+
+When new features or bug fixes are introduced, re‑run the following baseline suite to ensure existing functionality remains intact:
+
+1. **TC‑INV‑01 to TC‑INV‑04** – Stock receipt flow and alerts.
+2. **TC‑SALE‑01, TC‑SALE‑02** – Sale creation, tax, and POS integration.
+3. **TC‑EXPORT‑01** – Daily QuickBooks export.
+4. **TC‑AUTH‑01** – Login & password policy.
+5. **TC‑DATA‑01** – Retention policy.
+6. **SEC‑XSS‑01, SEC‑CSRF‑01** – Core security checks.
+7. **UAT‑01 to UAT‑04** – End‑to‑end business scenarios.
+
+Automate these tests where possible (e.g., Selenium for UI, Postman/Newman for API, JMeter for performance) and integrate into CI/CD pipeline.
+
+---
+
+### 10. Assumptions
+
+| # | Assumption |
+
+|---|------------|
+| A1 | Square provides a **real‑time REST API** with OAuth credentials already provisioned for the app. |
+| A2 | QuickBooks Online API is used; daily export runs as a **server‑side scheduled job** with proper OAuth refresh token handling. |
+| A3 | Tax rate is a **single flat percentage** (configurable in settings) – no multi‑rate or jurisdiction logic required for MVP. |
+| A4 | Email notifications (low‑stock, password expiration) are sent via an existing SMTP service; delivery latency ≤ 5 min. |
+| A5 | All users have **unique email addresses**; no single sign‑on (SSO) integration needed. |
+| A6 | The web app will be hosted on a **cloud VM** with auto‑scaling; daily backup stored in a secure object bucket. |
+| A7 | “Owner” role is a single user (or a small static list) and does not require role‑hierarchy management. |
+
+### 11. Open Questions
+
+| # | Question |
+
+|---|----------|
+| Q1 | What is the exact **local sales tax rate** and are there any exemptions (e.g., food vs. merchandise) that need to be considered later? |
+| Q2 | Should the low‑stock alert be sent **only via email**, or also via SMS/push notification? |
+| Q3 | What is the required **password expiration period** (90 days assumed) and is multi‑factor authentication (MFA) planned for future releases? |
+| Q4 | Are there any **audit‑log** requirements (who changed what and when) beyond the basic transaction timestamps? |
+| Q5 | What is the preferred **format** for the QuickBooks export (SalesReceipt vs. Invoice) and are custom fields needed? |
+| Q6 | Is there a maximum allowed **concurrent users** that the system must support at launch (e.g., 20 simultaneous baristas)? |
+
+---
+
+### 12. Remarks
+
+* **Data Consistency** – Inventory updates must be performed within a **database transaction** that also records the stock‑receipt audit entry to avoid mismatched quantities.
+* **Idempotency** – Export to QuickBooks should be idempotent; include a unique export batch ID to prevent duplicate entries if the job retries.
+* **Scalability** – Although MVP is moderate, design the API layer to be stateless so horizontal scaling is straightforward.
+* **Observability** – Implement basic logging (request ID, user ID, operation) and health‑check endpoints to aid monitoring and debugging.
+
+---
+
+*Prepared for the development and QA teams to drive a focused, test‑driven implementation of the Coffee‑Store Management Web App MVP.*
+
+# Coffee‑Store Management App – UI Screen Outline (MVP)
+
+> **Scope** – Web‑only application (desktop & tablet‑friendly).
+> **Core MVP features** – Inventory Management, Sales Tracking, Square POS integration, daily QuickBooks export.
+> **User roles** – Barista, Manager, Owner (different UI permissions).
+
+---
+
+## 1. Screen Catalog & Navigation Map
+
+| # | Screen (URL) | Primary Purpose | Who Can Access |
+
+|---|--------------|----------------|----------------|
+| 1 | `/login` | User authentication | All (public) |
+| 2 | `/dashboard` | High‑level overview (sales today, low‑stock alerts) | Barista, Manager, Owner |
+| 3 | `/sales/new` | Capture a new order, send it to Square, record transaction | Barista, Manager |
+| 4 | `/sales/history` | Browse, filter, and export past sales | Manager, Owner |
+| 5 | `/inventory` | List all inventory items, view quantities & alerts | Barista (view‑only), Manager, Owner |
+| 6 | `/inventory/item/:id` | Detail view & edit of a single product | Manager, Owner |
+| 7 | `/inventory/add` | Form to create a new inventory item | Manager, Owner |
+| 8 | `/settings` | System configuration (tax rates, backup, API keys) | Owner |
+| 9 | `/profile` | Change password, view personal info | All logged‑in users |
+| 10| `/reports/tax` | Generate periodic tax reports | Manager, Owner |
+| 11| `*` (404) | Friendly “Page not found” | All |
+
+**Navigation Flow (high‑level)**
+
+```
+Login → Dashboard
+Dashboard → (Sales) New Sale / Sales History
+Dashboard → (Inventory) Inventory List
+Inventory List → Item Detail / Add Item
+Item Detail → Edit (if permitted) → Save / Cancel
+New Sale → Order Form → Submit → Confirmation
+Settings (Owner) → Tax Settings / Backup Settings / API Keys
+Profile → Change Password
+```
+
+*All screens include a persistent top navigation bar (logo, user avatar, logout) and a left‑hand side menu (collapsed on mobile).*
+
+---
+
+## 2. Detailed Screen Specifications
+
+### 2.1 Login Page (`/login`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Authenticate users via email + password. |
+| **Key Components** | • Email input <br>• Password input (show/hide) <br>• “Remember me” checkbox <br>• “Forgot password?” link <br>• **Login** button <br>• Error banner (invalid credentials) |
+| **Primary Actions** | • Submit credentials → API `/auth/login` <br>• On success → redirect to `/dashboard` <br>• On failure → show error |
+| **Navigation** | No internal navigation (except “Forgot password?” which opens a modal). |
+| **Wireframe (text)** | Header centered: **Coffee‑Store Manager**. Form centered vertically. Footer with small copyright. |
+| **States** | **Empty** – blank form. <br>**Loading** – button shows spinner, inputs disabled. <br>**Error** – red banner “Invalid email or password”. <br>**Success** – redirect (no UI). |
+| **Responsive** | Mobile: full‑width inputs, stacked vertically. Desktop: form width max 400 px, centered. |
+| **Permission UI** | N/A (public). |
+| **Assumptions** | • Password expiration is enforced server‑side; UI only shows warning if password is near expiry (via `/profile`). |
+| **Open Questions** | • Is multi‑factor authentication required? |
+| **Remarks** | Use HTTPS, implement CSRF token, rate‑limit login attempts. |
+
+---
+
+### 2.2 Dashboard (`/dashboard`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Provide a snapshot: today’s sales total, number of orders, low‑stock alerts, quick links to core tasks. |
+| **Key Components** | • Top bar (user avatar, logout) <br>• Side menu (links to Sales, Inventory, Reports, Settings) <br>• **Today’s Sales** card (total amount, tax, number of transactions) <br>• **Low‑Stock Alerts** list (item name, qty, reorder threshold) <br>• **Quick Actions** buttons: “New Sale”, “Add Stock”, “Export to QuickBooks” |
+| **Primary Actions** | • Click “New Sale” → `/sales/new` <br>• Click an alert → `/inventory/item/:id` <br>• Click “Export to QuickBooks” → triggers daily export (shows toast). |
+| **Navigation** | From side menu → any other screen. From cards → respective screens. |
+| **Wireframe (text)** | Two‑column layout: left side menu (250 px), right main area. Top row: three cards (Sales, Alerts, Quick Actions). Below: optional recent activity table. |
+| **States** | **Loading** – skeleton cards. <br>**Error** – banner “Unable to load dashboard data”. <br>**Empty** – “No sales recorded today”. |
+| **Responsive** | Tablet: side menu collapses to hamburger; cards stack vertically. Mobile: full‑screen vertical scroll, hamburger menu. |
+| **Permission UI** | • **Barista** sees Sales card (read‑only) and Quick Actions “New Sale”. <br>• **Manager** sees all cards, can click alerts to edit inventory. <br>• **Owner** sees everything plus link to Settings. |
+| **Assumptions** | • Sales totals are fetched from the Square‑integrated backend. |
+| **Open Questions** | • Desired time‑range for “periodic” sales (day/week/month) on the dashboard? |
+| **Remarks** | Cache dashboard data for ≤ 30 seconds to reduce API load. |
+
+---
+
+### 2.3 New Sale (`/sales/new`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Capture an order, send it to Square for payment, and persist the transaction. |
+| **Key Components** | • Searchable product list (autocomplete) <br>• Order line table (item, unit price, qty, line total) <br>• “Add Item” button <br>• Tax selector (auto‑applied based on store config) <br>• Summary panel (subtotal, tax, total) <br>• **Submit Order** button (disabled until at least one line) <br>• Cancel/Back button |
+| **Primary Actions** | • Add/remove/edit line items <br>• Submit → POST `/sales` (backend calls Square API, records transaction) <br>• On success → show **Sale Confirmation** modal with receipt number, then redirect to `/sales/history` or back to Dashboard. |
+| **Navigation** | Accessible from Dashboard → “New Sale”. After success, user may stay on page (new order) or go back. |
+| **Wireframe (text)** | Left pane (70 % width) – product search + order table. Right pane (30 %) – summary & submit button. Header shows “New Sale – Barista: {Name}”. |
+| **States** | **Empty** – no lines, summary = $0.00. <br>**Loading** – spinner on Submit, inputs disabled while waiting for Square response. <br>**Error** – toast “Payment failed: {msg}”. <br>**Success** – modal “Sale recorded – Receipt #12345”. |
+| **Responsive** | Mobile: single column; product search collapses into a full‑width dropdown; summary panel becomes sticky footer. |
+| **Permission UI** | • **Barista** can create orders but cannot edit inventory. <br>• **Manager** can also create orders (same UI). |
+| **Assumptions** | • Tax rate is a single percentage stored in Settings. <br>• Square API returns a transaction ID used as receipt number. |
+| **Open Questions** | • Should the barista be able to apply discounts or coupons? |
+| **Remarks** | Ensure idempotent order submission (prevent double charge on network retry). Use WebSocket or polling to reflect real‑time payment status from Square. |
+
+---
+
+### 2.4 Sales History (`/sales/history`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Browse, filter, and export past sales for reporting or audit. |
+| **Key Components** | • Date range picker (preset: Today, Yesterday, Last 7 days, Custom) <br>• Search bar (receipt #, barista name) <br>• Table columns: Timestamp, Receipt #, Items, Qty, Subtotal, Tax, Total, Barista, Payment Method <br>• Export button (CSV, PDF) <br>• Pagination controls |
+| **Primary Actions** | • Filter → reload table <br>• Click a row → open **Sale Detail** modal (read‑only) <br>• Export → download file |
+| **Navigation** | From Dashboard → “Sales History”. Back to Dashboard via side menu. |
+| **Wireframe (text)** | Full‑width filter bar on top, then table, pagination at bottom. Export button aligned right. |
+| **States** | **Loading** – table skeleton rows. <br>**Empty** – “No sales match the selected criteria”. <br>**Error** – banner “Failed to load sales data”. |
+| **Responsive** | Table becomes scrollable horizontally on small screens; filter controls collapse into an accordion. |
+| **Permission UI** | • **Barista** – not visible (MVP). <br>• **Manager** – full access. <br>• **Owner** – full access, plus ability to delete a sale (optional – not in MVP). |
+| **Assumptions** | • Export is performed server‑side to avoid large data transfers. |
+| **Open Questions** | • Retention of deleted sales (soft‑delete vs hard‑delete)? |
+| **Remarks** | Apply proper indexing on sales DB for fast date‑range queries. |
+
+---
+
+### 2.5 Inventory List (`/inventory`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Show all stocked items, current quantities, and low‑stock status. |
+| **Key Components** | • Search bar (name, SKU) <br>• Filter toggle: “Show only low stock” <br>• Table columns: Product Name, SKU, Unit Price, Quantity, Reorder Threshold, Supplier, Actions (View/Edit) <br>• “Add New Item” button (visible to Manager/Owner) |
+| **Primary Actions** | • Click **View/Edit** → `/inventory/item/:id` (edit only if permitted) <br>• Click **Add New Item** → `/inventory/add` <br>• Inline sort by column |
+| **Navigation** | From Dashboard → Inventory. Back via side menu. |
+| **Wireframe (text)** | Header with “Inventory” title, search + filter row, then data table. Add button placed top‑right. |
+| **States** | **Loading** – skeleton rows. <br>**Empty** – “No inventory items found”. <br>**Error** – banner “Unable to fetch inventory”. |
+| **Responsive** | Table collapses to cards on < 600 px: each card shows name, qty, low‑stock badge, and a small “Edit” icon. |
+| **Permission UI** | • **Barista** – can view table, but **Actions** column shows only “View” (no edit). <br>• **Manager/Owner** – full edit links. |
+| **Assumptions** | • Low‑stock badge (red) appears when `quantity <= reorderThreshold`. |
+| **Open Questions** | • Should inventory support batch import (CSV) in later releases? |
+| **Remarks** | Use server‑side pagination for > 200 items. |
+
+---
+
+### 2.6 Inventory Item Detail / Edit (`/inventory/item/:id`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Display all fields of a product; allow manager/owner to edit and submit changes. |
+| **Key Components** | • Read‑only fields (Product Name, SKU) <br>• Editable fields: Unit Price, Supplier, Quantity, Reorder Threshold <br>• **Save** button (requires manager approval workflow) <br>• **Cancel** button <br>• **History** tab (optional – shows change log) |
+| **Primary Actions** | • Edit fields → click **Save** → POST `/inventory/:id` (creates pending change). <br>• System notifies manager for approval (if barista attempted edit – but barista cannot reach this screen). |
+| **Navigation** | Accessed from Inventory List → “View/Edit”. After save, return to list with toast “Update pending manager approval”. |
+| **Wireframe (text)** | Two‑column form: left column labels, right column inputs. Bottom row: Save/Cancel. |
+| **States** | **Loading** – spinner while fetching item. <br>**Error** – “Item not found” or “Failed to load”. <br>**Success** – toast “Changes saved, awaiting approval”. |
+| **Responsive** | Form fields stack vertically on narrow screens. |
+| **Permission UI** | • **Manager** – can edit and submit. <br>• **Owner** – same plus can delete (delete button not in MVP). |
+| **Assumptions** | • Approval workflow is a simple “manager clicks Approve in notification email”; UI only shows status (Pending/Approved). |
+| **Open Questions** | • Should quantity edits be logged with “adjustment reason”? |
+| **Remarks** | Validate numeric fields (price ≥ 0, quantity integer). |
+
+---
+
+### 2.7 Add New Inventory Item (`/inventory/add`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Create a new product record. |
+| **Key Components** | • Input fields: Product Name, SKU, Unit Price, Supplier, Initial Quantity, Reorder Threshold <br>• **Create** button (disabled until required fields filled) <br>• **Cancel** button |
+| **Primary Actions** | • Fill form → click **Create** → POST `/inventory` → on success redirect to `/inventory` with toast “Item added”. |
+| **Navigation** | From Inventory List → “Add New Item”. |
+| **Wireframe (text)** | Similar to Edit screen but all fields editable, no history tab. |
+| **States** | **Empty** – blank form. <br>**Loading** – button spinner after submit. <br>**Error** – field‑level validation messages + banner “Failed to add item”. |
+| **Responsive** | Same as Edit screen. |
+| **Permission UI** | Only **Manager** and **Owner** see the “Add New Item” button and can access this page. |
+| **Assumptions** | SKU must be unique; backend returns conflict error if duplicate. |
+| **Open Questions** | • Should the system auto‑generate SKU if left blank? |
+| **Remarks** | Consider auto‑suggesting next SKU based on existing pattern. |
+
+---
+
+### 2.8 Settings (`/settings`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Configure system‑wide parameters: tax rate, Square API credentials, QuickBooks export schedule, backup policy. |
+| **Key Components** | • Tabs: **General**, **Integrations**, **Backup** <br>• **General** – Tax percentage input, currency selector <br>• **Integrations** – Square API key (masked), QuickBooks OAuth token status, “Test Connection” buttons <br>• **Backup** – Toggle daily backup, retention period display <br>• **Save All** button |
+| **Primary Actions** | • Edit fields → click **Save All** → PATCH `/settings` <br>• Test connections → show success/failure toast |
+| **Navigation** | Accessible only from user avatar dropdown (Owner). |
+| **Wireframe (text)** | Left vertical tab list, right panel with form fields for selected tab. |
+| **States** | **Loading** – spinner while fetching current settings. <br>**Error** – banner “Unable to load settings”. <br>**Success** – toast “Settings saved”. |
+| **Responsive** | Tabs collapse into an accordion on mobile. |
+| **Permission UI** | Only **Owner** sees Settings. |
+| **Assumptions** | • Owner has already obtained Square and QuickBooks API credentials. |
+| **Open Questions** | • Is multi‑currency support required later? |
+| **Remarks** | Store API secrets encrypted at rest; never expose them to the front‑end (use server‑side proxy). |
+
+---
+
+### 2.9 User Profile (`/profile`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Let users view and update personal information, change password. |
+| **Key Components** | • Display name, email (read‑only) <br>• Password change fields: Current, New, Confirm <br>• **Update Password** button <br>• Activity log (last login, password expiry) |
+| **Primary Actions** | • Change password → POST `/users/me/password` → show success/error toast |
+| **Navigation** | From avatar dropdown → “Profile”. |
+| **Wireframe (text)** | Simple vertical form; password fields grouped together. |
+| **States** | **Loading** – spinner while fetching user data. <br>**Error** – “Failed to load profile”. <br>**Success** – toast “Password updated”. |
+| **Responsive** | Full‑width on mobile. |
+| **Permission UI** | All logged‑in users can view their own profile. |
+| **Assumptions** | Password policy (≥ 8 chars, expiration) enforced server‑side; UI shows warning if password expires within 7 days. |
+| **Open Questions** | • Should users be able to upload a profile picture? |
+| **Remarks** | Use secure password fields (no autocomplete). |
+
+---
+
+### 2.10 Tax Report (`/reports/tax`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Generate periodic tax reports (e.g., monthly) required for filing. |
+| **Key Components** | • Date range selector (month picker) <br>• Generate button <br>• Report preview table: Taxable Sales, Tax Collected, Total Sales <br>• Export PDF/CSV button |
+| **Primary Actions** | • Choose period → click **Generate** → fetch report data <br>• Export → download file |
+| **Navigation** | From Dashboard → “Tax Reports” (or side menu under Reports). |
+| **Wireframe (text)** | Top bar with selector, middle area shows table after generation, bottom export actions. |
+| **States** | **Empty** – no report generated yet. <br>**Loading** – spinner overlay on table area. <br>**Error** – banner “Failed to generate report”. |
+| **Responsive** | Table becomes scrollable; export buttons stay sticky at bottom. |
+| **Permission UI** | Visible to Manager and Owner only. |
+| **Assumptions** | Tax rate is constant for the selected period; any tax‑exempt items are handled elsewhere (not in MVP). |
+| **Open Questions** | • Do you need multi‑jurisdiction tax breakdowns? |
+| **Remarks** | Ensure report data matches the same calculations used in sales recording to avoid discrepancies. |
+
+---
+
+### 2.11 404 – Not Found (`*`)
+
+| Aspect | Details |
+|--------|---------|
+| **Purpose** | Friendly error page for unknown routes. |
+| **Key Components** | • Large “404” graphic <br>• Message “Page not found” <br>• Button “Return to Dashboard” |
+| **Primary Actions** | • Click button → `/dashboard` |
+| **Wireframe (text)** | Centered vertical stack. |
+| **States** | Single static state. |
+| **Responsive** | Centered content scales. |
+| **Permission UI** | N/A |
+| **Assumptions** | None |
+| **Open Questions** | None |
+| **Remarks** | Log the missing URL for analytics. |
+
+---
+
+## 3. Global UI Elements
+
+| Element | Description | Responsive / Permission notes |
+|---------|-------------|--------------------------------|
+| **Top Navigation Bar** | Logo (left), current user avatar (right) with dropdown (Profile, Settings (Owner), Logout). | Hamburger menu appears on < 768 px. |
+| **Side Menu** | Links: Dashboard, Sales → New / History, Inventory, Reports → Tax, Settings (Owner). Highlights current page. | Collapses to vertical drawer on mobile. |
+| **Toast Notifications** | Auto‑dismiss after 5 s; used for success/error of async actions. | Same across all screens. |
+| **Modal Dialogs** | Used for confirmations (e.g., “Delete item?”) and sale receipt view. | Full‑screen on mobile. |
+| **Loading Skeletons** | Shimmer placeholders for tables, cards, forms. | Consistent across screens. |
+
+---
+
+## 4. Permission‑Based UI Differences (Summary)
+
+| Role | Inventory List | Inventory Edit/Add | New Sale | Settings | Reports |
+|------|----------------|--------------------|----------|----------|---------|
+| **Barista** | View only, low‑stock badge | No access | Full access | No access | No access |
+| **Manager** | View & edit (edit button visible) | Can add & edit items | Full access | No access | View tax reports |
+| **Owner** | Full view & edit | Full add/edit/delete | Full access | Full access (all tabs) | View tax reports, can delete items (future) |
+
+---
+
+## 5. Assumptions
+
+| # | Description |
+
+|---|-------------|
+| A1 | The Square API provides a synchronous endpoint for creating a payment transaction and returns a receipt ID instantly. |
+| A2 | QuickBooks daily export is a server‑side scheduled job; UI only shows a manual “Export now” button for testing. |
+| A3 | Tax is a single flat percentage configured in Settings; no complex tax rules for now. |
+| A4 | Manager approval workflow for inventory changes is a simple “status = pending → approved by manager via email link”. UI only reflects status. |
+| A5 | All dates/times are stored and displayed in the store’s local timezone. |
+| A6 | Daily backups are performed by the backend; UI only shows last backup timestamp. |
+| A7 | Password expiration warning is shown on the Profile page if < 7 days to expiry. |
+| A8 | No offline/stand‑alone mode is required for MVP. |
+| A9 | Browser support: latest Chrome, Edge, Firefox, Safari (desktop & tablet). Mobile browsers are supported but no native app. |
+
+---
+
+## 6. Open Questions
+
+| # | Question |
+
+|---|----------|
+| Q1 | Is multi‑factor authentication (MFA) required for any role? |
+| Q2 | Should baristas be able to apply discounts or promotional codes during a sale? |
+| Q3 | Do you need support for multiple tax rates (e.g., different rates for food vs. beverage)? |
+| Q4 | Will the system need to handle product variants (size, milk type) as separate SKUs? |
+| Q5 | What is the exact format required for the QuickBooks daily export (CSV schema, API endpoint)? |
+| Q6 | Should the inventory “Add Stock” workflow be a separate screen (e.g., receiving) or done via the edit screen? |
+| Q7 | Are there any branding guidelines (colors, fonts, logo) that must be applied? |
+| Q8 | Do you need audit logs visible in the UI for compliance (who changed what and when)? |
+| Q9 | What is the expected maximum concurrent users (for scalability planning)? |
+
+---
+
+## 7. Remarks & Non‑Functional Considerations
+
+* **Security** – All API calls must be over HTTPS; JWT access token stored in HttpOnly cookie. Enforce role‑based access control (RBAC) on the server; UI must hide/disable unauthorized actions.
+* **Performance** – Use pagination & server‑side filtering for tables (sales, inventory). Cache static reference data (suppliers, tax rate) client‑side for ≤ 5 min.
+* **Scalability** – Design UI components to handle up to 10 k inventory items and 100 k sales records without UI lag (virtual scrolling if needed).
+* **Accessibility** – Follow WCAG 2.1 AA: proper label‑for associations, focus order, color contrast, keyboard navigation.
+* **Internationalization** – Text strings should be externalized for future i18n; dates/times formatted per locale.
+* **Testing** – Provide unit tests for form validation, integration tests for the New Sale flow (mock Square API), and end‑to‑end tests for permission restrictions.
+
+---
+
+*Prepared for the development team to start UI implementation.*
+
+## Implementation Plan – Coffee‑Store Management Web App (MVP)
+
+| Phase | Duration (approx.) | Primary Goal |
+|-------|-------------------|--------------|
+| **Phase 1 – Core MVP** | **6 weeks** (≈ 30 dev days) | Build the minimal, production‑ready system that satisfies the MVP scope: inventory management, sales tracking, Square POS integration, QuickBooks export, authentication & role‑based access, low‑stock alerts, and data‑retention/back‑up basics. |
+| **Phase 2 – Reporting & Operations** | **4 weeks** (≈ 20 dev days) | Add tax calculation, periodic tax reports, richer sales & inventory analytics, configurable notifications, and robust backup/retention enforcement. |
+| **Phase 3 – polish & future‑proofing** | **3 weeks** (≈ 15 dev days) | Refine UI/UX (responsive design), add audit logs, admin settings, optional extensions (e.g., multi‑store, native‑mobile wrapper), and performance / security hardening. |
+
+> **Overall timeline:** ~13 weeks (≈ 3 months) from project kickoff to a production‑ready release. Adjustments can be made after each phase review.
+
+---
+
+### Phase 1 – Core MVP
+
+| Feature | Description | Priority | Dependencies |
+|---------|-------------|----------|--------------|
+| **1.1 Authentication & User Management** | Email + password login, password‑policy (≥ 8 chars, expiration), password reset flow. | High – required for any access. | None |
+| **1.2 Role‑Based Permissions** | Three roles: **Owner** (full), **Manager** (edit inventory, view sales), **Barista** (view inventory, create sales). Permissions enforced on API & UI. | High – drives UI visibility. | 1.1 |
+| **1.3 Data Model & Persistence** | PostgreSQL schema for Users, InventoryItems, StockAdjustments, Sales, Alerts, ExportLogs. Include fields listed in *Data & Inputs*. | High – foundation for all other features. | 1.1 |
+| **1.4 Inventory Management UI** | • Barista can **record** a stock receipt (form with product, quantity, supplier). <br>• Submission creates a **pending** StockAdjustment. <br>• Manager UI to **approve/ reject** pending adjustments; on approval, quantity is updated. | High – core workflow. | 1.2, 1.3 |
+| **1.5 Square POS Integration (Order Entry & Payment)** | • Barista enters order (items + quantities) in the web UI. <br>• Backend calls Square **CreateOrder** → **Pay** APIs. <br>• On successful payment, a Sale record is persisted automatically. | High – sales tracking must be real‑time. | 1.1, 1.3 |
+| **1.6 Low‑Stock Alert Engine** | Daily (or on‑adjustment) job checks `current_quantity < reorder_threshold`. If true, creates an Alert and sends an email to all Managers. | Medium – improves inventory control. | 1.3, 1.4 |
+| **1.7 QuickBooks Daily Export** | Nightly job extracts the day’s sales, formats to QuickBooks Online **SalesReceipt** JSON, and POSTs via QuickBooks API. Logs success/failure. | Medium – required for accounting. | 1.3, 1.5 |
+| **1.8 Data Retention & Backup** | • Retain all tables for **7 years** (soft‑delete flag, archival script). <br>• Automated **daily** dump to a secure S3 bucket (or equivalent). | Medium – compliance requirement. | 1.3 |
+| **1.9 Basic Reporting Dashboard** | Simple read‑only tables: current inventory levels, today’s sales, low‑stock items. | Low – for internal validation. | 1.3, 1.5 |
+
+#### Phase 1 Milestones & Deliverables
+
+| Milestone | Target Date (relative) | Deliverable |
+|-----------|-----------------------|-------------|
+| **M1 – Project Setup** | Week 1 | Repo, CI/CD pipeline, dev‑/‑test environments, DB schema migrations. |
+| **M2 – Auth & RBAC** | Week 2 | Login page, password policy, role enforcement. |
+| **M3 – Inventory Core** | Week 4 | Stock receipt UI, manager approval flow, low‑stock alert email. |
+| **M4 – Square Integration** | Week 5 | Order entry UI, successful payment flow, sales persisted. |
+| **M5 – QuickBooks Export** | Week 6 | Nightly export job, export‑log view, manual “Export Now” button. |
+| **M6 – MVP Release Candidate** | End of Week 6 | All Phase 1 features integrated, internal QA sign‑off. |
+
+#### Phase 1 Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Square API rate limits / schema changes | Blocking sales flow | Wrap calls in retry/back‑off, version‑lock API client, maintain a mock stub for dev/testing. |
+| QuickBooks authentication token expiry | Missed daily export | Store refresh token securely, schedule a health‑check job, alert on failure. |
+| Password‑expiration enforcement (no native support) | Security compliance gap | Implement a `password_last_changed` column and enforce on login; schedule reminder emails. |
+| Data‑loss on backup failure | Compliance breach | Verify backup success via checksum, keep at least two copies in different regions. |
+
+---
+
+### Phase 2 – Reporting & Operations
+
+| Feature | Description | Priority | Dependencies |
+|---------|-------------|----------|--------------|
+| **2.1 Tax Calculation Engine** | Apply configurable **local sales tax rate** (e.g., 8.5 %) to each line item at order time; store `tax_amount` per sale. | High – required for accurate reporting. | 1.5 |
+| **2.2 Periodic Tax Reports** | Generate PDF/CSV reports (weekly, monthly) summarizing taxable sales, tax collected, and breakdown by product. | High – supports filing. | 2.1 |
+| **2.3 Enhanced Sales Analytics** | Charts for sales trends, top‑selling items, barista performance. | Medium | 1.5, 2.1 |
+| **2.4 Configurable Notification Channels** | Allow manager to choose **email** or **SMS** (via Twilio) for low‑stock alerts; UI for preferences. | Medium | 1.6 |
+| **2.5 Backup Verification & Retention Automation** | Automated verification of daily backup integrity; purge data older than 7 years automatically. | Medium | 1.8 |
+| **2.6 UI/UX Refinements** | Responsive layout, keyboard shortcuts for baristas, accessibility (WCAG 2.1 AA). | Low | All UI components. |
+| **2.7 Admin Settings Panel** | Owner can edit tax rate, reorder thresholds defaults, backup schedule, API credentials. | Low | 1.2, 1.3 |
+
+#### Phase 2 Milestones & Deliverables
+
+| Milestone | Target Date (relative) | Deliverable |
+|-----------|-----------------------|-------------|
+| **M7 – Tax Engine** | Week 8 (Week 2 of Phase 2) | Sales records now include tax, tax‑rate config UI. |
+| **M8 – Tax & Sales Reports** | Week 9 | PDF/CSV generation, scheduled email delivery. |
+| **M9 – Notification Preferences** | Week 10 | Manager can toggle email/SMS, test message UI. |
+| **M10 – Backup & Retention Automation** | Week 10 | Automated verification script, purge job. |
+| **M11 – Analytics Dashboard** | Week 11 | Interactive charts, export options. |
+| **M12 – Phase 2 Release Candidate** | End of Week 12 | All Phase 2 features stable, ready for production. |
+
+#### Phase 2 Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Tax rate changes mid‑year | Incorrect tax collection | Store tax rate as a **historical** value per sale; UI to update future rates only. |
+| SMS costs / provider downtime | Alert delivery failure | Fallback to email if SMS fails; allow manager to disable SMS. |
+| Large report generation causing timeouts | Poor UX | Generate reports asynchronously, store results for download. |
+| Backup storage cost overruns | Budget issue | Compress backups, use lifecycle policies to move older backups to cheaper storage class. |
+
+---
+
+### Phase 3 – Polish & Future‑Proofing
+
+| Feature | Description | Priority | Dependencies |
+|---------|-------------|----------|--------------|
+| **3.1 Responsive & Mobile‑Friendly UI** | Ensure all screens work on tablets & smartphones (touch‑optimized). | High – improves barista workflow. | 1‑2 UI components. |
+| **3.2 Audit Log** | Immutable log of all inventory adjustments, sales edits, user logins (who, when, what). | Medium | 1.2, 1.4, 1.5 |
+| **3.3 Multi‑Store Support (future)** | Data model extension to tag records with `store_id`; UI selector for managers/owners. | Low (planned) | Core data model. |
+| **3.4 Native‑Mobile Wrapper (optional)** | Wrap the web app in a lightweight Capacitor/Electron shell for offline mode (future release). | Low (future) | Completed web UI. |
+| **3.5 Performance Optimizations** | DB indexing, query caching, lazy loading of large tables. | Medium | All data‑heavy features. |
+| **3.6 Security Hardening** | CSP headers, rate‑limiting, OWASP‑top‑10 remediation, penetration test. | High – production readiness. | Entire codebase. |
+| **3.7 Documentation & Training Materials** | Admin guide, barista quick‑start, API docs (Swagger). | Medium | All features. |
+
+#### Phase 3 Milestones & Deliverables
+
+| Milestone | Target Date (relative) | Deliverable |
+|-----------|-----------------------|-------------|
+| **M13 – Responsive UI** | Week 13 | All screens pass mobile viewport tests. |
+| **M14 – Audit Log** | Week 14 | Log view for Owner, exportable CSV. |
+| **M15 – Security Review** | Week 14 | Pen‑test report, mitigations applied. |
+| **M16 – Documentation Pack** | Week 15 | User manuals, API spec, deployment guide. |
+| **M17 – Production Launch** | End of Week 15 | Full‑stack app live, monitoring dashboards active. |
+
+#### Phase 3 Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Mobile browsers inconsistencies | Barista errors | Use a UI framework with proven cross‑browser support (e.g., React + Material‑UI). |
+| Audit log growth | Storage bloat | Archive logs older than 2 years to cold storage. |
+| Security gaps discovered late | Compliance breach | Conduct a third‑party security audit before final launch. |
+
+---
+
+## Software Scope & Later Enhancements
+
+| Current MVP Scope (Phase 1) | Planned Future Enhancements |
+|-----------------------------|-----------------------------|
+| Web‑only, single‑store, inventory & sales core, Square & QuickBooks integration, basic alerts, 7‑year retention. | • Multi‑store handling <br>• Native iOS/Android apps <br>• Loyalty program & customer profiles <br>• Advanced forecasting (ML) <br>• Integration with other POS (e.g., Toast) <br>• Offline‑first mode for barista tablets |
+
+---
+
+## Assumptions
+
+| # | Assumption |
+
+|---|------------|
+| A1 | **Square** provides a stable, real‑time REST API for order creation, payment capture, and receipt retrieval. |
+| A2 | **QuickBooks Online** API allows daily creation of SalesReceipt objects via OAuth2. |
+| A3 | Email service (e.g., SendGrid) is available for low‑stock and password‑reset notifications. |
+| A4 | The coffee shop operates in a single tax jurisdiction; tax rate is a single numeric value configurable by the Owner. |
+| A5 | Daily backup storage will be an AWS S3 bucket with versioning enabled. |
+| A6 | The development team will use a modern JavaScript stack (React front‑end, Node.js/Express back‑end) and PostgreSQL. |
+| A7 | All users have corporate email addresses; no social‑login required. |
+
+---
+
+## Open Questions
+
+| # | Question |
+
+|---|----------|
+| Q1 | Will the manager receive low‑stock alerts via **SMS**, **email**, or both? If SMS, which provider (Twilio, Nexmo, etc.)? |
+| Q2 | Are there **different tax rates** for specific product categories (e.g., food vs. merchandise)? |
+| Q3 | What is the exact **password expiration** policy (e.g., 90 days, forced change on first login)? |
+| Q4 | Should the QuickBooks export include **customer details** (if any) or just aggregate sales? |
+| Q5 | What is the preferred **backup retention location** (same cloud provider, separate region, on‑prem)? |
+| Q6 | Are there any **accessibility compliance** standards (e.g., ADA) that must be met beyond WCAG 2.1 AA? |
+| Q7 | Will the system need to support **offline order entry** (e.g., when POS connectivity is down) in the future? |
+
+---
+
+## Remarks & Recommendations
+
+* **Testing:** Unit tests for all business logic (inventory adjustments, tax calculation) + end‑to‑end Cypress tests for the barista order flow.
+* **CI/CD:** Deploy to a staging environment on every merge; automated integration tests run against a temporary Square sandbox account.
+* **Monitoring:** Use Prometheus + Grafana for API latency; set alerts for failed Square/QuickBooks calls.
+* **Compliance:** Even though the app is web‑only, ensure PCI‑DSS compliance by never storing raw card data – rely entirely on Square for payment processing.
+* **Scalability:** Design the API to be stateless; session handling via JWTs to allow horizontal scaling later.
+* **Documentation:** Generate OpenAPI (Swagger) spec from the Express routes; keep it version‑controlled.
+
+---
+
+**Next Steps**
+1. Review the **Open Questions** with the stakeholder and obtain definitive answers.
+2. Confirm the **technology stack** (React/Next.js, Node.js/Express, PostgreSQL) and any preferred cloud provider.
+3. Approve the Phase 1 plan and allocate the initial development resources (frontend, backend, QA).
+
+Once approved, the team can commence **Phase 1 – Core MVP** as outlined above.
 
 ---
 
@@ -1826,7 +2240,7 @@ With this plan, the development team has a clear, testable roadmap that delivers
 
 **Generated by:** SpecBaker
 **Version:** 1.0.0
-**Generated at:** 2026-05-16T05:17:12.562Z
+**Generated at:** 2026-05-16T07:37:25.344Z
 
 ### How to Use This Specification
 

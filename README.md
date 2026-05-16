@@ -36,6 +36,7 @@ SpecBaker solves this by:
 - ⚡ **Fast** - Complete specification in under 5 minutes
 - 🎨 **Clean Markdown** - Version control friendly output
 - 🔧 **Configurable** - Customize questions, models, and output
+- 🌐 **Web Interface** - User-friendly browser-based UI (no CLI needed!)
 
 ## 📦 Installation
 
@@ -94,6 +95,18 @@ That's it! SpecBaker will:
 - Ask clarifying questions
 - Generate a complete specification
 - Save it to `specification.md`
+
+### 2b. Or Use the Web Interface
+
+Prefer a graphical interface? Start the web server:
+
+```bash
+specbaker web
+```
+
+Then open your browser to `http://localhost:3000` and generate specifications through a beautiful, interactive UI!
+
+See [Web Interface Documentation](docs/WEB_INTERFACE.md) for more details.
 
 ## 📖 Usage
 

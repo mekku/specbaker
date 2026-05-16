@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpecBaker - AI-Powered Specification Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>🥖 SpecBaker</h1>
+                <p class="tagline">Transform vague ideas into detailed specifications</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Step 1: Goal Input -->
+            <section id="goal-section" class="section active">
+                <div class="card">
+                    <h2>What do you want to build?</h2>
+                    <p class="help-text">Describe your software project in a few sentences</p>
+                    <textarea id="goal-input"
+                        placeholder="Example: I want to build a task management app for small teams that helps them track projects, assign tasks, and collaborate in real-time..."
+                        rows="6"></textarea>
+                    <button id="start-btn" class="btn btn-primary">Start Generation</button>
+                </div>
+            </section>
+
+            <!-- Step 2: Questions -->
+            <section id="questions-section" class="section">
+                <div class="card">
+                    <div class="progress-header">
+                        <h2>Clarifying Questions</h2>
+                        <div class="progress-info">
+                            <span id="question-counter">Question 1 of 10</span>
+                        </div>
+                    </div>
+                    <div id="questions-container"></div>
+                </div>
+            </section>
+
+            <!-- Step 3: Processing -->
+            <section id="processing-section" class="section">
+                <div class="card">
+                    <h2>Generating Your Specification</h2>
+                    <div class="processing-container">
+                        <div class="spinner"></div>
+                        <p id="processing-status">Analyzing your requirements...</p>
+                        <div class="progress-bar">
+                            <div id="progress-fill" class="progress-fill"></div>
+                        </div>
+                        <div id="processing-steps" class="processing-steps"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 4: Results -->
+            <section id="results-section" class="section">
+                <div class="card">
+                    <div class="results-header">
+                        <h2>Your Specification is Ready! 🎉</h2>
+                        <div class="results-actions">
+                            <button id="download-btn" class="btn btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M8 12L3 7h3V1h4v6h3L8 12z" />
+                                    <path d="M1 14h14v2H1v-2z" />
+                                </svg>
+                                Download .md
+                            </button>
+                            <button id="new-spec-btn" class="btn btn-secondary">New Specification</button>
+                        </div>
+                    </div>
+                    <div class="results-stats" id="results-stats"></div>
+                    <div id="results-content" class="markdown-body"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Powered by IBM watsonx.ai | <a href="https://github.com/yourusername/specbaker"
+                    target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
