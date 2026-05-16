@@ -1,0 +1,64 @@
+{
+    "name": "specbaker",
+    "version": "1.0.0",
+    "description": "Transform vague software goals into structured, implementation-ready specifications using IBM watsonx.ai",
+    "main": "src/cli/index.js",
+    "bin": {
+        "specbaker": "./bin/specbaker.js"
+    },
+    "scripts": {
+        "start": "node bin/specbaker.js",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "lint": "eslint src/ tests/",
+        "lint:fix": "eslint src/ tests/ --fix",
+        "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\""
+    },
+    "keywords": [
+        "cli",
+        "specification",
+        "requirements",
+        "watsonx",
+        "ibm",
+        "ai",
+        "code-generation",
+        "documentation"
+    ],
+    "author": "SpecBaker Team",
+    "license": "MIT",
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "dependencies": {
+        "commander": "^11.1.0",
+        "inquirer": "^9.2.12",
+        "@ibm-cloud/watsonx-ai": "^1.1.0",
+        "dotenv": "^16.3.1",
+        "chalk": "^5.3.0",
+        "ora": "^7.0.1",
+        "axios": "^1.6.2"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "eslint": "^8.54.0",
+        "eslint-config-prettier": "^9.0.0",
+        "eslint-plugin-jest": "^27.6.0",
+        "prettier": "^3.1.0",
+        "@types/jest": "^29.5.8"
+    },
+    "files": [
+        "bin/",
+        "src/",
+        "README.md",
+        "LICENSE"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/specbaker.git"
+    },
+    "bugs": {
+        "url": "https://github.com/yourusername/specbaker/issues"
+    },
+    "homepage": "https://github.com/yourusername/specbaker#readme"
+}
