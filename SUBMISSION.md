@@ -340,9 +340,7 @@ Public GitHub repository
 ## Links
 
 - GitHub Repository: https://github.com/mekku/specbaker
-- Demo Video: TBD
-- Slide Presentation: TBD
-- Live Demo: TBD
+- Demo link: https://specbaker-production.up.railway.app
 
 ## Final Summary
 
