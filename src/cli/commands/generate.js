@@ -117,8 +117,8 @@ async function generateCommand(goal, options) {
                 const followUpQuestions = followUpQuestionsResult.questions;
                 const followUpSummary = followUpQuestionsResult.summary;
 
-                logger.info(`Follow-up questions for round ${round}:`);
-                logger.info(followUpSummary)
+                // logger.info(`Follow-up questions for round ${round}:`);
+                // logger.info(followUpSummary)
 
 
                 if (followUpQuestions.length === 0) {
@@ -127,8 +127,8 @@ async function generateCommand(goal, options) {
                 }
 
                 const wantsFollowUp = await prompter.confirm(
-                    `\nWould you like to dive deeper with follow-up questions? (Round ${round})`,
-                    round === 1 // Default yes for first round
+                    `\n${followUpSummary}\nWould you like to dive deeper with follow-up questions? (${followUpQuestions.length} questions to go on.)`,
+                    round < 3 // Default yes for first round
                 );
 
                 if (!wantsFollowUp) {

@@ -9,12 +9,16 @@
  * Base context template used in all section prompts
  */
 const BASE_CONTEXT = `
+You are an expert Systems Analyst conducting a requirements gathering session. 
+Based on following context, generate clarifying the spec of the following section. 
+Try you best to solve the goal of development. You can suggest more details if needed or as optional but must be aligned with the goal and given context.
+
 Goal: {goal}
 Domain: {domain}
 Complexity: {complexity}
 
-User Answers:
-{answers}
+User answers:
+{answersByCategory}
 `;
 
 /**
@@ -167,11 +171,21 @@ function getSectionPrompt(sectionName, context) {
         throw new Error(`No prompt template found for section: ${sectionName}`);
     }
 
+    // Format answers for better readability
+    const allAnswersFormatted = context.allAnswers
+        ? JSON.stringify(context.allAnswers, null, 2)
+        : 'No answers provided yet';
+
+    const answersByCategoryFormatted = context.answersByCategory
+        ? JSON.stringify(context.answersByCategory, null, 2)
+        : 'No categorized answers yet';
+
     return template
-        .replace('{goal}', context.goal || '')
+        .replace('{goal}', context.goal || 'Not specified')
         .replace('{domain}', context.analysis?.domain || 'general')
         .replace('{complexity}', context.analysis?.complexity || 'moderate')
-        .replace('{answers}', JSON.stringify(context.answers || {}, null, 2));
+        .replace('{allAnswers}', allAnswersFormatted)
+        .replace('{answersByCategory}', answersByCategoryFormatted);
 }
 
 /**

@@ -245,9 +245,29 @@ This mock response helps with development and testing without requiring actual A
      * Generate a specification section
      */
     async generateSection(sectionName, context) {
-        const prompt = getSectionPrompt(sectionName, context);
-        logger.debug(prompt)
-        return await this.generateText(prompt, SPEC_GENERATION_CONFIG);
+        try {
+            const prompt = getSectionPrompt(sectionName, context);
+            logger.debug(`Prompt for ${sectionName}:`);
+            logger.debug(prompt);
+
+            const result = await this.generateText(prompt, SPEC_GENERATION_CONFIG);
+
+            logger.debug(`AI response for ${sectionName}: ${result ? result.substring(0, 100) : 'NULL'}...`);
+
+            if (!result || result.trim().length === 0) {
+                logger.error(`AI returned empty response for ${sectionName}`);
+                logger.error('This usually means:');
+                logger.error('1. The AI model is not responding correctly');
+                logger.error('2. The prompt may be too complex or unclear');
+                logger.error('3. There may be an API issue');
+                throw new Error(`AI returned empty response for ${sectionName}`);
+            }
+
+            return result;
+        } catch (error) {
+            logger.error(`Failed to generate section ${sectionName}: ${error.message}`);
+            throw error;
+        }
     }
 
     /**

@@ -422,7 +422,7 @@ class QuestionGenerator {
      * Generate follow-up questions based on answers (for deeper context)
      */
     async generateFollowUpRound(context, previousAnswers, roundNumber) {
-        logger.info(`\nLet me think for a while...`);
+        logger.progress(`\nLet me think for a while...`);
 
         try {
             // Analyze previous answers to find areas needing clarification
@@ -453,6 +453,8 @@ class QuestionGenerator {
         } catch (error) {
             logger.warn('Failed to generate follow-up questions:', error.message);
             logger.debug(error);
+        } finally {
+            logger.progressDone();
         }
 
         return [];

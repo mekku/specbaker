@@ -58,14 +58,13 @@ class SpecEngine {
 
                     spinner.succeed(`${section.name} generated`);
                 } catch (error) {
-                    spinner.fail(`${section.name} generation failed`);
-                    logger.error(`Failed to generate ${section.name}`);
-                    logger.error('SpecBaker requires a working AI connection to generate quality specifications.');
-                    logger.newline();
-                    logger.info('Please ensure your watsonx.ai configuration is correct.');
-                    logger.info('Run: specbaker config setup');
-                    logger.debug(error)
-                    throw new Error(`AI specification generation failed at section: ${section.name}`);
+                    spinner.warn(`${section.name} generation failed - using placeholder`);
+                    logger.warn(`AI failed to generate ${section.name}: ${error.message}`);
+                    logger.warn('Creating placeholder section. You should manually complete this section.');
+                    logger.debug(error);
+
+                    // Create a placeholder section with context
+                    this.generatedSections[section.key] = this.createPlaceholderSection(section.name, contextData);
                 }
 
                 // Small delay to avoid rate limiting
@@ -95,13 +94,21 @@ class SpecEngine {
     async generateSection(sectionName, contextData) {
         logger.debug(`Generating section: ${sectionName}`);
 
-        // Generate content using AI (prompt is handled in watsonx-client)
-        const content = await this.watsonxClient.generateSection(sectionName, contextData);
+        try {
+            // Generate content using AI (prompt is handled in watsonx-client)
+            const content = await this.watsonxClient.generateSection(sectionName, contextData);
 
-        // Validate and clean content
-        const validated = this.validateSection(sectionName, content);
+            logger.debug(`Received content for ${sectionName}: ${content ? content.substring(0, 100) : 'NULL'}...`);
 
-        return validated;
+            // Validate and clean content
+            const validated = this.validateSection(sectionName, content);
+
+            return validated;
+        } catch (error) {
+            logger.error(`Error generating ${sectionName}: ${error.message}`);
+            logger.debug(`Full error:`, error);
+            throw error;
+        }
     }
 
 
@@ -109,17 +116,27 @@ class SpecEngine {
      * Validate section content
      */
     validateSection(sectionName, content) {
-        if (!content || content.trim().length === 0) {
-            throw new Error(`Empty content generated for ${sectionName}`);
+        // Check if content exists
+        if (!content) {
+            logger.error(`AI returned null/undefined for ${sectionName}`);
+            throw new Error(`No content generated for ${sectionName}. AI may have failed to respond.`);
         }
 
-        // Ensure content is not too short
-        if (content.length < 100) {
-            logger.warn(`Section ${sectionName} seems too short (${content.length} chars)`);
+        // Check if content is empty after trimming
+        const trimmed = content.trim();
+        if (trimmed.length === 0) {
+            logger.error(`AI returned empty string for ${sectionName}`);
+            throw new Error(`Empty content generated for ${sectionName}. AI response was blank.`);
+        }
+
+        // Ensure content is not too short (likely an error message or incomplete response)
+        if (trimmed.length < 50) {
+            logger.warn(`Section ${sectionName} is very short (${trimmed.length} chars): "${trimmed}"`);
+            logger.warn('This may indicate an AI generation issue. Consider checking your prompts.');
         }
 
         // Clean up content
-        let cleaned = content.trim();
+        let cleaned = trimmed;
 
         // Ensure section has a heading
         if (!cleaned.startsWith('#')) {
@@ -130,40 +147,52 @@ class SpecEngine {
     }
 
     /**
-     * Get fallback content for a section
+     * Create placeholder content when AI generation fails
      */
-    getFallbackContent(sectionName, contextData) {
+    createPlaceholderSection(sectionName, contextData) {
+        const warning = `> ⚠️ **AI GENERATION FAILED** - This section contains placeholder content based on your answers.
+> Please review and complete this section manually with specific details for your project.
+
+`;
+
         const templates = {
             'Product Summary': `## Product Summary
 
+${warning}
 **Goal:** ${contextData.goal}
 
 **Problem Being Solved:**
 This application addresses the need for ${contextData.goal.toLowerCase()}.
 
 **Target Users:**
-${contextData.analysis.extractedInfo?.users?.join(', ') || 'End users'}
+Based on your answers: ${JSON.stringify(contextData.allAnswers, null, 2)}
 
 **Success Criteria:**
 - User adoption and engagement
 - Feature completeness
 - Performance and reliability
-- User satisfaction`,
+- User satisfaction
+
+**TODO:** Add specific success metrics and KPIs`,
 
             'User Roles': `## User Roles
 
+${warning}
 ### Primary Users
-- End Users: Main users of the application
-- Administrators: Manage system settings and users
+Based on your answers, identify and describe each user role:
 
-### User Permissions
-- End Users: Read and write access to their own data
-- Administrators: Full system access`,
+${JSON.stringify(contextData.answersByCategory['User & Audience'] || [], null, 2)}
+
+**TODO:**
+- Define specific user roles
+- Describe permissions for each role
+- Add user personas with details`,
 
             'Access & Deployment': `## Access & Deployment
 
+${warning}
 **Access Method:**
-Users will access the application via ${contextData.analysis.domain === 'web' ? 'web browser' : 'appropriate platform'}.
+Users will access the application via ${contextData.analysis?.domain === 'web' ? 'web browser' : 'appropriate platform'}.
 
 **Deployment Model:**
 Cloud-based deployment for scalability and accessibility.
@@ -171,15 +200,22 @@ Cloud-based deployment for scalability and accessibility.
 **Technical Requirements:**
 - Modern web browser (Chrome, Firefox, Safari, Edge)
 - Stable internet connection
-- Responsive design for mobile devices`,
+- Responsive design for mobile devices
+
+**TODO:** Specify exact deployment requirements and platform details`,
 
             'Core Requirements': `## Core Requirements
 
+${warning}
 ### Functional Requirements
-1. User authentication and authorization
-2. Core feature implementation based on user needs
-3. Data management and storage
-4. User interface for all main features
+Based on your answers about features:
+${JSON.stringify(contextData.answersByCategory['Core Functionality'] || [], null, 2)}
+
+**TODO:**
+1. List specific functional requirements
+2. Add non-functional requirements (performance, security, scalability)
+3. Define technical constraints
+4. Specify integration requirements
 
 ### Non-Functional Requirements
 - **Performance:** Fast response times (< 2 seconds)
@@ -189,94 +225,92 @@ Cloud-based deployment for scalability and accessibility.
 
             'Important Decisions': `## Important Decisions
 
+${warning}
 ### Technology Stack
+Based on your requirements, consider:
 - Modern, maintainable technology choices
 - Industry-standard frameworks and libraries
 - Cloud-native architecture
 
-### Design Patterns
-- RESTful API design
-- Component-based UI architecture
-- Separation of concerns`,
+**TODO:** Make specific technology decisions based on your constraints and team expertise`,
 
             'User Journey / Workflow': `## User Journey / Workflow
 
+${warning}
 ### Main User Flow
-1. User accesses the application
-2. User authenticates (if required)
-3. User navigates to desired feature
-4. User performs actions
-5. System provides feedback
-6. User completes task`,
+Based on your core features:
+${JSON.stringify(contextData.answersByCategory['Core Functionality'] || [], null, 2)}
+
+**TODO:**
+1. Map out detailed user journeys for each main feature
+2. Include decision points and alternative paths
+3. Add error handling scenarios`,
 
             'Data Model': `## Data Model
 
+${warning}
 ### Main Entities
-- **User:** User account information
-- **Data:** Core application data
-- **Settings:** User and system settings
+Based on your application needs, identify:
+- Core data entities
+- Their attributes
+- Relationships between entities
 
-### Relationships
-- Users have associated data
-- Data belongs to users
-- Settings are user-specific`,
+**TODO:** Create detailed data model with specific fields and relationships`,
 
             'UI Screen Outline': `## UI Screen Outline
 
+${warning}
 ### Main Screens
-1. **Home/Dashboard:** Overview and quick actions
-2. **Feature Screens:** Main functionality
-3. **Settings:** User preferences
-4. **Profile:** User account management
+Based on your features and user roles:
+${JSON.stringify(contextData.allAnswers, null, 2)}
 
-### Navigation
-- Top navigation bar
-- Sidebar for main sections
-- Breadcrumbs for deep navigation`,
+**TODO:**
+1. List all screens/pages
+2. Describe layout and components for each
+3. Define navigation flow`,
 
             'Test Scenarios': `## Test Scenarios
 
+${warning}
 ### Critical Test Cases
-1. User authentication flow
-2. Main feature functionality
-3. Data creation and modification
-4. Error handling
-5. Edge cases
+Based on your core requirements:
+1. Test main features
+2. Test user workflows
+3. Test edge cases
+4. Test error handling
 
-### Acceptance Criteria
-- All features work as specified
-- No critical bugs
-- Performance meets requirements
-- Security measures in place`,
+**TODO:** Write specific test scenarios with expected outcomes`,
 
             'Implementation Plan': `## Implementation Plan
 
-### Phase 1: Foundation (Weeks 1-2)
+${warning}
+### Suggested Phases
+**Phase 1: Foundation**
 - Set up development environment
 - Implement authentication
 - Create basic UI structure
 
-### Phase 2: Core Features (Weeks 3-4)
+**Phase 2: Core Features**
 - Implement main features
 - Add data management
-- Create user interfaces
 
-### Phase 3: Polish & Testing (Weeks 5-6)
+**Phase 3: Polish & Testing**
 - Bug fixes and refinements
 - Performance optimization
 - User testing and feedback
 
-### Phase 4: Deployment (Week 7)
-- Production deployment
-- Monitoring setup
-- Documentation`,
+**TODO:** Adjust timeline based on team size and complexity`,
 
             'Bob-Ready Prompt': `## Bob-Ready Prompt
 
+${warning}
 \`\`\`
 Build an application with the following specifications:
 
 Goal: ${contextData.goal}
+
+User Answers:
+${JSON.stringify(contextData.allAnswers, null, 2)}
 
 Requirements:
 - Implement core functionality as described
@@ -284,23 +318,23 @@ Requirements:
 - Ensure security and performance
 - Follow best practices
 
-Technical Stack:
-- Use modern, maintainable technologies
-- Implement proper error handling
-- Add comprehensive testing
-
-Deliverables:
-- Working application
-- Clean, documented code
-- Deployment instructions
-- User documentation
+**TODO:** Complete this prompt with specific technical requirements, constraints, and deliverables from the other sections of this specification.
 
 Please implement this step by step, starting with the foundation and building up to the complete application.
 \`\`\`
 `
         };
 
-        return templates[sectionName] || `## ${sectionName}\n\n[Content to be added]`;
+        return templates[sectionName] || `## ${sectionName}
+
+${warning}
+This section could not be generated by AI.
+
+**Context:**
+- Goal: ${contextData.goal}
+- User Answers: ${JSON.stringify(contextData.allAnswers, null, 2)}
+
+**TODO:** Manually complete this section based on your project requirements.`;
     }
 
     /**
