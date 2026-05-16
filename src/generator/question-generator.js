@@ -89,6 +89,7 @@ class QuestionGenerator {
     }
 
     /**
+     * DEPRECATED: Use pure ai no fallback
      * Generate template questions based on analysis (DEPRECATED - kept for reference only)
      * This method is no longer used as we require AI for quality specifications.
      */
@@ -278,7 +279,7 @@ class QuestionGenerator {
             text: 'What is more important: speed to market or feature completeness?',
             priority: 2,
             allowMultiple: false,
-            suggestedAnswers: ['Speed to market (MVP approach)', 'Feature completeness', 'Balanced approach']
+            suggestedAnswers: ['Speed to market (Software approach)', 'Feature completeness', 'Balanced approach']
         });
 
         return questions;
@@ -448,7 +449,7 @@ class QuestionGenerator {
             logger.debug(followUpQuestionsResponse);
 
             if (followUpQuestions && followUpQuestions.length > 0) {
-                return { ...followUpQuestionsResponse, questions: followUpQuestions.slice(0, 5) }; // Return only the first 5 questions
+                return { ...followUpQuestionsResponse, questions: followUpQuestions.map(x => ({ ...x, id: `follow-up-${roundNumber}-${x.id}` })) }; // Return only the first 5 questions
             }
         } catch (error) {
             logger.warn('Failed to generate follow-up questions:', error.message);

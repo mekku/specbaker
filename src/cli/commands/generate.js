@@ -119,6 +119,7 @@ async function generateCommand(goal, options) {
                 const confidenceReason = followUpQuestionsResult.confidenceReason ?? '';
                 const confidenceScore = followUpQuestionsResult.confidenceScore ?? 0;
                 const roundType = followUpQuestionsResult.roundType ?? "";
+                const whatYouKnow = followUpQuestionsResult.whatYouKnow ?? "";
                 const confidenceThreshold = 85
 
                 logger.debug(`\nRound type: ${roundType}`);
@@ -126,9 +127,16 @@ async function generateCommand(goal, options) {
                 logger.debug(`Reason: ${confidenceReason}`);
                 logger.debug(followUpSummary);
 
+                // Display what we know so far
+                if (whatYouKnow) {
+                    logger.newline();
+                    logger.info(chalk.cyan('📋 What we know so far:'));
+                    logger.info(chalk.gray(whatYouKnow));
+                }
+
                 // Hard stop: AI says enough
                 if (followUpQuestions.length === 0 || confidenceScore >= 90) {
-                    logger.success('✓ Requirements are sufficient for MVP specification!');
+                    logger.success('✓ Requirements are sufficient for software specification!');
                     logger.info('Next step: generate or update the specification.');
                     break;
                 }
@@ -137,10 +145,11 @@ async function generateCommand(goal, options) {
                 // Default should be NO, not YES.
                 if (confidenceScore >= confidenceThreshold) {
                     const wantsFollowUp = await prompter.confirm(
-                        `\nSpecBaker confidence: ${confidenceScore}/100 (Ready to Bake)
+                        `\n What we know so far: ${whatYouKnow}
+                        \nSpecBaker confidence: ${confidenceScore}/100 (Ready to Bake)
 Reason: ${confidenceReason}
 
-The current details are probably enough for an MVP spec.
+The current details are probably enough for an software spec.
 There are ${followUpQuestions.length} optional follow-up question(s).
 
 ${followUpSummary}
@@ -156,7 +165,8 @@ Do you still want to answer them, or should we generate the spec now?`,
 
                 // Normal continue: still not enough
                 const wantsFollowUp = await prompter.confirm(
-                    `\nSpecBaker confidence: ${confidenceScore}/100
+                    `\nWhat we know so far: ${whatYouKnow}
+                    \nSpecBaker confidence: ${confidenceScore}/100
 Reason: ${confidenceReason}
 
 ${followUpSummary}

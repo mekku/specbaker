@@ -8,9 +8,6 @@
 /**
  * Base context template used in all section prompts
  */
-/**
- * Base context template used in all section prompts
- */
 const BASE_CONTEXT = `
 You are an expert Systems Analyst conducting a requirements clarification session.
 
@@ -36,7 +33,9 @@ Complexity: {complexity}
 
 User answers:
 {answersByCategory}
-`;
+
+Format as markdown with clear structure. Be specific, practical, and actionable.
+No need to strict all bullet points but should not cover subjective spec. keep short and clear.`;
 
 /**
  * Section-specific prompts
@@ -191,7 +190,7 @@ Generate an Implementation Plan section that includes:
 - Estimated timeline or relative effort for each phase
 - Milestones and deliverables
 - Risk mitigation strategies
-- MVP scope and later enhancements
+- Software scope and later enhancements
 - Assumptions, open questions, and remarks if needed
 
 Format as markdown with clear phases. Be realistic, practical, and suitable for actual development planning.`,
