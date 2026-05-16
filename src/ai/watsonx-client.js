@@ -1,10 +1,14 @@
 /**
  * WatsonX AI Client
- * 
+ *
  * Wrapper for IBM watsonx.ai SDK with error handling and retry logic.
  */
 
 const { getLogger } = require('../utils/logger');
+const { getGoalAnalysisPrompt, GOAL_ANALYSIS_CONFIG } = require('./prompts/goal-analysis');
+const { getQuestionGenerationPrompt, QUESTION_GENERATION_CONFIG } = require('./prompts/question-generation');
+const { getSectionPrompt, SPEC_GENERATION_CONFIG } = require('./prompts/spec-generation');
+
 const logger = getLogger();
 
 class WatsonXClient {
@@ -202,24 +206,8 @@ This mock response helps with development and testing without requiring actual A
      * Analyze a goal statement
      */
     async analyzeGoal(goalText) {
-        const prompt = `Analyze this software goal and provide a structured analysis.
-
-Goal: "${goalText}"
-
-Provide a JSON response with:
-1. intent - What the user wants to achieve
-2. domain - Software domain (web, mobile, api, desktop, etc.)
-3. complexity - simple, moderate, or complex
-4. extractedInfo - Object with arrays: users, features, constraints
-5. ambiguities - Array of things that need clarification
-6. suggestedQuestions - Array of questions to ask
-
-Format your response as valid JSON only, no additional text.`;
-
-        const response = await this.generateText(prompt, {
-            temperature: 0.3,
-            maxTokens: 800
-        });
+        const prompt = getGoalAnalysisPrompt(goalText);
+        const response = await this.generateText(prompt, GOAL_ANALYSIS_CONFIG);
 
         try {
             return JSON.parse(response);
@@ -240,31 +228,8 @@ Format your response as valid JSON only, no additional text.`;
      * Generate clarifying questions
      */
     async generateQuestions(context) {
-        const prompt = `Based on this context, generate 3-5 clarifying questions to create a complete specification.
-
-Context:
-${JSON.stringify(context, null, 2)}
-
-Generate questions about:
-- User roles and personas
-- Access methods and deployment
-- Success criteria and metrics
-- Technical constraints
-- Priority features
-
-Format your response as a JSON array of question objects with:
-- id: unique identifier
-- category: question category
-- text: the question text
-- priority: 1 (high) or 2 (medium)
-- suggestedAnswers: array of suggested answers (optional)
-
-Return only valid JSON, no additional text.`;
-
-        const response = await this.generateText(prompt, {
-            temperature: 0.5,
-            maxTokens: 1000
-        });
+        const prompt = getQuestionGenerationPrompt(context);
+        const response = await this.generateText(prompt, QUESTION_GENERATION_CONFIG);
 
         try {
             return JSON.parse(response);
@@ -278,24 +243,8 @@ Return only valid JSON, no additional text.`;
      * Generate a specification section
      */
     async generateSection(sectionName, context) {
-        const prompt = `Generate the "${sectionName}" section for a software specification.
-
-Context:
-${JSON.stringify(context, null, 2)}
-
-Requirements:
-- Format as markdown
-- Be specific and actionable
-- Include all relevant details
-- Use proper markdown formatting (headers, lists, tables, etc.)
-- Make it ready for a developer to implement
-
-Generate comprehensive content for this section.`;
-
-        return await this.generateText(prompt, {
-            temperature: 0.4,
-            maxTokens: 2000
-        });
+        const prompt = getSectionPrompt(sectionName, context);
+        return await this.generateText(prompt, SPEC_GENERATION_CONFIG);
     }
 
     /**

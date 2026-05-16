@@ -27,13 +27,33 @@ class InteractivePrompter {
             console.log(chalk.gray(`Category: ${question.category}`));
         }
 
+        // Determine if this should be a multiple-choice question
+        const allowMultiple = question.allowMultiple || false;
+        const hasSuggestions = question.suggestedAnswers && question.suggestedAnswers.length > 0;
+
+        // Show hint for multiple selection
+        if (allowMultiple && hasSuggestions) {
+            console.log(chalk.yellow('  (You can select multiple options using Space, then press Enter)'));
+        }
+
+        let promptType = 'input';
+        if (hasSuggestions) {
+            promptType = allowMultiple ? 'checkbox' : 'list';
+        }
+
         const promptConfig = {
-            type: question.suggestedAnswers && question.suggestedAnswers.length > 0 ? 'list' : 'input',
+            type: promptType,
             name: 'answer',
             message: 'Your answer:',
             validate: (input) => {
-                if (question.suggestedAnswers && question.suggestedAnswers.length > 0) {
-                    return true; // List selections are always valid
+                if (hasSuggestions) {
+                    if (allowMultiple) {
+                        // For checkbox, ensure at least one is selected
+                        if (Array.isArray(input) && input.length === 0) {
+                            return 'Please select at least one option';
+                        }
+                    }
+                    return true;
                 }
                 const validation = validateAnswer(input);
                 return validation.valid || validation.error;
@@ -41,7 +61,7 @@ class InteractivePrompter {
         };
 
         // Add choices if suggested answers exist
-        if (question.suggestedAnswers && question.suggestedAnswers.length > 0) {
+        if (hasSuggestions) {
             promptConfig.choices = [
                 ...question.suggestedAnswers,
                 new inquirer.Separator(),
@@ -52,7 +72,37 @@ class InteractivePrompter {
         const response = await inquirer.prompt([promptConfig]);
         let answer = response.answer;
 
-        // If user selected "Other", ask for custom input
+        // Handle multiple selections
+        if (allowMultiple && Array.isArray(answer)) {
+            // Check if "Other" was selected
+            if (answer.includes('Other (type custom answer)')) {
+                // Remove "Other" from the array
+                answer = answer.filter(a => a !== 'Other (type custom answer)');
+
+                // Ask for custom input
+                const customResponse = await inquirer.prompt([{
+                    type: 'input',
+                    name: 'customAnswer',
+                    message: 'Please provide additional answer(s) (comma-separated):',
+                    validate: (input) => {
+                        const validation = validateAnswer(input);
+                        return validation.valid || validation.error;
+                    }
+                }]);
+
+                // Add custom answers to the array
+                const customAnswers = customResponse.customAnswer
+                    .split(',')
+                    .map(a => a.trim())
+                    .filter(a => a.length > 0);
+                answer = [...answer, ...customAnswers];
+            }
+
+            // Join multiple answers with commas
+            return answer.join(', ');
+        }
+
+        // Handle single selection with "Other" option
         if (answer === 'Other (type custom answer)') {
             const customResponse = await inquirer.prompt([{
                 type: 'input',
@@ -66,7 +116,7 @@ class InteractivePrompter {
             answer = customResponse.customAnswer;
         }
 
-        return answer.trim();
+        return typeof answer === 'string' ? answer.trim() : answer;
     }
 
     /**

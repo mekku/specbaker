@@ -12,6 +12,7 @@ const { getLogger, setLogger } = require('../../utils/logger');
 const WatsonXClient = require('../../ai/watsonx-client');
 const GoalAnalyzer = require('../../analyzer/goal-analyzer');
 const QuestionGenerator = require('../../generator/question-generator');
+const { generateDeveloperQuestions, shouldAskDeveloperQuestions } = require('../../generator/developer-questions');
 const InteractivePrompter = require('../../prompts/interactive-prompter');
 const ContextBuilder = require('../../context/context-builder');
 const SpecEngine = require('../../generator/spec-engine');
@@ -88,6 +89,25 @@ async function generateCommand(goal, options) {
 
             // Show summary
             prompter.displaySummary(questions, answers);
+
+            // Step 3.5: Optional Developer/Technical Questions
+            const wantsDeveloperQuestions = await shouldAskDeveloperQuestions(prompter);
+
+            if (wantsDeveloperQuestions) {
+                const devQuestions = generateDeveloperQuestions(analysis);
+                contextBuilder.addQuestions(devQuestions);
+
+                logger.info(`\nAsking ${devQuestions.length} technical questions...\n`);
+                const devAnswers = await prompter.askQuestions(devQuestions);
+
+                // Add developer answers to context
+                for (const [questionId, answer] of Object.entries(devAnswers)) {
+                    contextBuilder.addAnswer(questionId, answer);
+                }
+
+                // Show summary of developer answers
+                prompter.displaySummary(devQuestions, devAnswers);
+            }
 
             // Confirm before generating
             const shouldGenerate = await prompter.confirm(

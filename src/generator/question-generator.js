@@ -51,6 +51,7 @@ class QuestionGenerator {
             category: q.category || 'General',
             text: q.text,
             priority: q.priority || 2,
+            allowMultiple: q.allowMultiple || false,
             dependsOn: q.dependsOn || [],
             suggestedAnswers: q.suggestedAnswers || []
         }));
@@ -79,6 +80,7 @@ class QuestionGenerator {
                 category: 'User & Audience',
                 text: 'Who are the primary users of this application?',
                 priority: 1,
+                allowMultiple: true,
                 suggestedAnswers: ['General public', 'Business users', 'Internal team', 'Specific professionals']
             });
         }
@@ -88,6 +90,7 @@ class QuestionGenerator {
             category: 'User & Audience',
             text: 'What is the expected number of users?',
             priority: 2,
+            allowMultiple: false,
             suggestedAnswers: ['< 100', '100-1,000', '1,000-10,000', '> 10,000']
         });
 
@@ -97,6 +100,7 @@ class QuestionGenerator {
             category: 'Access & Deployment',
             text: 'How will users access this application?',
             priority: 1,
+            allowMultiple: true,
             suggestedAnswers: ['Web browser', 'Mobile app (iOS/Android)', 'Desktop application', 'API only']
         });
 
@@ -105,6 +109,7 @@ class QuestionGenerator {
             category: 'Access & Deployment',
             text: 'What is the preferred deployment model?',
             priority: 2,
+            allowMultiple: false,
             suggestedAnswers: ['Cloud (AWS/Azure/GCP)', 'On-premises', 'Hybrid', 'Not sure']
         });
 
@@ -114,6 +119,7 @@ class QuestionGenerator {
             category: 'Core Functionality',
             text: 'What are the top 3 most important features?',
             priority: 1,
+            allowMultiple: false,
             suggestedAnswers: []
         });
 
@@ -122,6 +128,7 @@ class QuestionGenerator {
             category: 'Core Functionality',
             text: 'Are there any existing systems this needs to integrate with?',
             priority: 2,
+            allowMultiple: true,
             suggestedAnswers: ['No integrations needed', 'Database systems', 'Third-party APIs', 'Legacy systems']
         });
 
@@ -131,6 +138,7 @@ class QuestionGenerator {
             category: 'Success Criteria',
             text: 'How will you measure the success of this application?',
             priority: 1,
+            allowMultiple: true,
             suggestedAnswers: ['User adoption rate', 'Performance metrics', 'Business KPIs', 'User satisfaction']
         });
 
@@ -140,6 +148,7 @@ class QuestionGenerator {
             category: 'Constraints',
             text: 'Are there any specific technical constraints or requirements?',
             priority: 2,
+            allowMultiple: true,
             suggestedAnswers: ['Must use specific technology', 'Performance requirements', 'Security requirements', 'No specific constraints']
         });
 
@@ -149,6 +158,7 @@ class QuestionGenerator {
             category: 'Priority',
             text: 'What is the target timeline for the first version?',
             priority: 2,
+            allowMultiple: false,
             suggestedAnswers: ['< 1 month', '1-3 months', '3-6 months', '> 6 months']
         });
 
@@ -157,6 +167,7 @@ class QuestionGenerator {
             category: 'Priority',
             text: 'What is more important: speed to market or feature completeness?',
             priority: 2,
+            allowMultiple: false,
             suggestedAnswers: ['Speed to market (MVP approach)', 'Feature completeness', 'Balanced approach']
         });
 
