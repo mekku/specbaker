@@ -50,13 +50,13 @@ async function generateCommand(goal, options) {
         const formatter = new MarkdownFormatter(config);
 
         // Show welcome message
-        if (!options.noInteractive) {
+        if (options.interactive !== false) {
             prompter.showWelcome();
         }
 
         // Get goal if not provided
         if (!goal) {
-            if (options.noInteractive) {
+            if (options.interactive === false) {
                 logger.error('Goal is required when using --no-interactive mode');
                 process.exit(1);
             }
@@ -75,7 +75,7 @@ async function generateCommand(goal, options) {
         contextBuilder.addQuestions(questions);
 
         // Step 3: Interactive Q&A (if not disabled)
-        if (!options.noInteractive && questions.length > 0) {
+        if (options.interactive !== false && questions.length > 0) {
             logger.section('Clarifying Questions');
             logger.info('Please answer the following questions to create a complete specification.\n');
 
@@ -99,7 +99,7 @@ async function generateCommand(goal, options) {
                 logger.info('Specification generation cancelled.');
                 process.exit(0);
             }
-        } else if (options.noInteractive) {
+        } else if (options.interactive === false) {
             logger.info('Skipping interactive questions (--no-interactive mode)');
 
             // Add default answers for non-interactive mode
