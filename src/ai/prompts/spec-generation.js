@@ -26,6 +26,7 @@ Instructions:
 - Prefer specific, testable, and actionable wording.
 - Avoid generic statements unless the context is also generic.
 - If the provided information is insufficient, improvise a sensible baseline that supports the development goal.
+**No need to strict all bullet points but should not cover subjective spec. keep short, clear and human-readable.**
 
 Goal: {goal}
 Domain: {domain}
@@ -34,8 +35,7 @@ Complexity: {complexity}
 User answers:
 {answersByCategory}
 
-Format as markdown with clear structure. Be specific, practical, and actionable.
-No need to strict all bullet points but should not cover subjective spec. keep short and clear.`;
+Format as markdown with clear structure. Be specific, practical, and actionable.`;
 
 /**
  * Section-specific prompts

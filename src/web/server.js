@@ -165,6 +165,7 @@ class SpecBakerServer {
                 const confidenceScore = followUpResult.confidenceScore || 0;
                 const confidenceReason = followUpResult.confidenceReason || '';
                 const roundType = followUpResult.roundType || '';
+                const whatYouKnow = followUpResult.whatYouKnow || '';
 
                 // Return all confidence data
                 res.json({
@@ -172,7 +173,8 @@ class SpecBakerServer {
                     summary: followUpSummary,
                     confidenceScore,
                     confidenceReason,
-                    roundType
+                    roundType,
+                    whatYouKnow
                 });
 
             } catch (error) {

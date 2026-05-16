@@ -273,7 +273,7 @@ class MarkdownFormatter {
             // Ensure proper spacing around headings
             .replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2')
             // Ensure proper spacing after headings
-            .replace(/(#{1,6}\s.+)\n([^\n])/g, '$1\n\n$2')
+            .replace(/^(#{1,6}\s.+)\n([^\n])/g, '$1\n\n$2')
             // Trim trailing whitespace
             .replace(/[ \t]+$/gm, '')
             // Ensure file ends with newline
