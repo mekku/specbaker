@@ -22,12 +22,12 @@ const DEFAULT_CONFIG = {
         apiKey: null,
         projectId: null,
         region: 'us-south',
-        model: 'ibm/granite-13b-chat-v2',
+        model: 'openai/gpt-oss-120b',
         maxTokens: 4000,
         temperature: 0.4
     },
     output: {
-        defaultPath: 'specification.md',
+        defaultPath: 'examples/specification.md',
         format: 'markdown',
         includeTimestamp: true
     },
@@ -113,7 +113,7 @@ class ConfigManager {
             this.config.watsonx.temperature = parseFloat(process.env.WATSONX_TEMPERATURE);
         }
         if (process.env.MAX_QUESTIONS) {
-            this.config.prompts.maxQuestions = parseInt(process.env.MAX_QUESTIONS, 10);
+            this.config.prompts.maxQuestions = parseInt(process.env.MAX_QUESTIONS, 999);
         }
         if (process.env.QUESTION_DEPTH) {
             this.config.prompts.questionDepth = process.env.QUESTION_DEPTH;

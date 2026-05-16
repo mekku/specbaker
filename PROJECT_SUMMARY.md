@@ -285,7 +285,7 @@ specbaker generate --help
 WATSONX_API_KEY=your_api_key_here
 WATSONX_PROJECT_ID=your_project_id
 WATSONX_REGION=us-south
-WATSONX_MODEL=ibm/granite-13b-chat-v2
+WATSONX_MODEL=openai/gpt-oss-120b
 ```
 
 ---

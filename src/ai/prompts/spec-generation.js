@@ -26,6 +26,7 @@ Instructions:
 - Prefer specific, testable, and actionable wording.
 - Avoid generic statements unless the context is also generic.
 - If the provided information is insufficient, improvise a sensible baseline that supports the development goal.
+- Make some visualizations, diagrams to make human easy to understand.
 **No need to strict all bullet points but should not cover subjective spec. keep short, clear and human-readable.**
 
 Goal: {goal}

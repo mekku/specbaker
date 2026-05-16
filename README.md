@@ -223,7 +223,7 @@ Create a `.env` file or set environment variables:
 WATSONX_API_KEY=your_api_key_here
 WATSONX_PROJECT_ID=your_project_id
 WATSONX_REGION=us-south
-WATSONX_MODEL=ibm/granite-13b-chat-v2
+WATSONX_MODEL=openai/gpt-oss-120b
 MAX_QUESTIONS=10
 QUESTION_DEPTH=detailed
 ```
@@ -238,7 +238,7 @@ Located at `~/.specbaker/config.json`:
     "apiKey": "your_api_key",
     "projectId": "your_project_id",
     "region": "us-south",
-    "model": "ibm/granite-13b-chat-v2",
+    "model": "openai/gpt-oss-120b",
     "maxTokens": 4000,
     "temperature": 0.4
   },

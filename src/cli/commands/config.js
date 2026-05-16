@@ -158,71 +158,69 @@ async function setup() {
                 name: 'model',
                 message: 'Preferred Model:',
                 choices: [
-                    'ibm/granite-13b-chat-v2',
-                    'ibm/granite-20b-multilingual',
-                    'meta-llama/llama-2-70b-chat',
-                    'meta-llama/llama-2-13b-chat'
+                    'openai/gpt-oss-120b',
+                    'ibm/granite-4-h-small',
                 ],
                 default: currentConfig.watsonx.model
             }
         ]);
 
         // Ask for output preferences
-        console.log(chalk.bold('\n2. Output Preferences\n'));
+        // console.log(chalk.bold('\n2. Output Preferences\n'));
 
-        const outputAnswers = await inquirer.prompt([
-            {
-                type: 'input',
-                name: 'defaultPath',
-                message: 'Default output file path:',
-                default: currentConfig.output.defaultPath
-            },
-            {
-                type: 'confirm',
-                name: 'includeTimestamp',
-                message: 'Include timestamp in generated specs?',
-                default: currentConfig.output.includeTimestamp
-            }
-        ]);
+        // const outputAnswers = await inquirer.prompt([
+        //     {
+        //         type: 'input',
+        //         name: 'defaultPath',
+        //         message: 'Default output file path:',
+        //         default: currentConfig.output.defaultPath
+        //     },
+        //     {
+        //         type: 'confirm',
+        //         name: 'includeTimestamp',
+        //         message: 'Include timestamp in generated specs?',
+        //         default: currentConfig.output.includeTimestamp
+        //     }
+        // ]);
 
-        // Ask for prompt preferences
-        console.log(chalk.bold('\n3. Question Preferences\n'));
+        // // Ask for prompt preferences
+        // console.log(chalk.bold('\n3. Question Preferences\n'));
 
-        const promptAnswers = await inquirer.prompt([
-            {
-                type: 'number',
-                name: 'maxQuestions',
-                message: 'Maximum number of questions to ask:',
-                default: currentConfig.prompts.maxQuestions,
-                validate: (input) => {
-                    if (input < 1 || input > 20) {
-                        return 'Please enter a number between 1 and 20';
-                    }
-                    return true;
-                }
-            },
-            {
-                type: 'list',
-                name: 'questionDepth',
-                message: 'Question depth level:',
-                choices: [
-                    { name: 'Basic (fewer questions)', value: 'basic' },
-                    { name: 'Detailed (recommended)', value: 'detailed' },
-                    { name: 'Comprehensive (more questions)', value: 'comprehensive' }
-                ],
-                default: currentConfig.prompts.questionDepth
-            }
-        ]);
+        // const promptAnswers = await inquirer.prompt([
+        //     {
+        //         type: 'number',
+        //         name: 'maxQuestions',
+        //         message: 'Maximum number of questions to ask:',
+        //         default: currentConfig.prompts.maxQuestions,
+        //         validate: (input) => {
+        //             if (input < 1 || input > 20) {
+        //                 return 'Please enter a number between 1 and 20';
+        //             }
+        //             return true;
+        //         }
+        //     },
+        //     {
+        //         type: 'list',
+        //         name: 'questionDepth',
+        //         message: 'Question depth level:',
+        //         choices: [
+        //             { name: 'Basic (fewer questions)', value: 'basic' },
+        //             { name: 'Detailed (recommended)', value: 'detailed' },
+        //             { name: 'Comprehensive (more questions)', value: 'comprehensive' }
+        //         ],
+        //         default: currentConfig.prompts.questionDepth
+        //     }
+        // ]);
 
         // Update configuration
         configManager.set('watsonx.apiKey', answers.apiKey);
         configManager.set('watsonx.projectId', answers.projectId);
         configManager.set('watsonx.region', answers.region);
         configManager.set('watsonx.model', answers.model);
-        configManager.set('output.defaultPath', outputAnswers.defaultPath);
-        configManager.set('output.includeTimestamp', outputAnswers.includeTimestamp);
-        configManager.set('prompts.maxQuestions', promptAnswers.maxQuestions);
-        configManager.set('prompts.questionDepth', promptAnswers.questionDepth);
+        // configManager.set('output.defaultPath', outputAnswers.defaultPath);
+        // configManager.set('output.includeTimestamp', outputAnswers.includeTimestamp);
+        // configManager.set('prompts.maxQuestions', promptAnswers.maxQuestions);
+        // configManager.set('prompts.questionDepth', promptAnswers.questionDepth);
 
         // Save configuration
         if (configManager.save()) {

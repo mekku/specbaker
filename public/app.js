@@ -408,8 +408,8 @@ class SpecBakerApp {
                 </p>
             </div>
             <div class="question-actions">
-                <button class="btn btn-secondary" id="skip-dev-btn">Skip - Generate Specification</button>
-                <button class="btn btn-primary" id="continue-dev-btn">Yes, Ask Technical Questions</button>
+            <button class="btn btn-secondary" id="continue-dev-btn">Yes, Ask Technical Questions</button>
+                <button class="btn btn-primary" id="skip-dev-btn">Skip - Generate Specification</button>
             </div>
         `;
 
