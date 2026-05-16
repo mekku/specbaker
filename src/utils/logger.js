@@ -18,10 +18,10 @@ class Logger {
     constructor(options = {}) {
         this.level = this.parseLevel(options.level || process.env.LOG_LEVEL || 'INFO');
         this.verbose = options.verbose || process.env.VERBOSE === 'true';
-        this.debug = options.debug || process.env.DEBUG === 'true';
+        this.debugMode = options.debug || process.env.DEBUG === 'true';
 
         // Adjust level based on flags
-        if (this.debug) {
+        if (this.debugMode) {
             this.level = LOG_LEVELS.DEBUG;
         } else if (this.verbose) {
             this.level = LOG_LEVELS.INFO;
@@ -36,7 +36,7 @@ class Logger {
     error(message, error = null) {
         if (this.level >= LOG_LEVELS.ERROR) {
             console.error(chalk.red('❌ ERROR:'), message);
-            if (error && this.debug) {
+            if (error && this.debugMode) {
                 console.error(chalk.gray(error.stack || error));
             }
         }
