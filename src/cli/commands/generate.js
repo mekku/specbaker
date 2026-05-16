@@ -114,26 +114,61 @@ async function generateCommand(goal, options) {
                     round
                 );
                 logger.debug(followUpQuestionsResult);
-                const followUpQuestions = followUpQuestionsResult.questions;
-                const followUpSummary = followUpQuestionsResult.summary;
+                const followUpQuestions = followUpQuestionsResult.questions ?? [];
+                const followUpSummary = followUpQuestionsResult.summary ?? "";
+                const confidenceReason = followUpQuestionsResult.confidenceReason ?? '';
+                const confidenceScore = followUpQuestionsResult.confidenceScore ?? 0;
+                const roundType = followUpQuestionsResult.roundType ?? "";
+                const confidenceThreshold = 85
 
-                // logger.info(`Follow-up questions for round ${round}:`);
-                // logger.info(followUpSummary)
+                logger.debug(`\nRound type: ${roundType}`);
+                logger.debug(`Confidence: ${confidenceScore}/100`);
+                logger.debug(`Reason: ${confidenceReason}`);
+                logger.debug(followUpSummary);
 
-
-                if (followUpQuestions.length === 0) {
-                    logger.success('✓ All areas are sufficiently detailed!');
+                // Hard stop: AI says enough
+                if (followUpQuestions.length === 0 || confidenceScore >= 90) {
+                    logger.success('✓ Requirements are sufficient for MVP specification!');
+                    logger.info('Next step: generate or update the specification.');
                     break;
                 }
 
+                // Soft stop: mostly enough, ask user whether to continue.
+                // Default should be NO, not YES.
+                if (confidenceScore >= confidenceThreshold) {
+                    const wantsFollowUp = await prompter.confirm(
+                        `\nSpecBaker confidence: ${confidenceScore}/100 (Ready to Bake)
+Reason: ${confidenceReason}
+
+The current details are probably enough for an MVP spec.
+There are ${followUpQuestions.length} optional follow-up question(s).
+
+${followUpSummary}
+Do you still want to answer them, or should we generate the spec now?`,
+                        false
+                    );
+
+                    if (!wantsFollowUp) {
+                        logger.success('✓ Stopping requirement questions based on sufficient confidence.');
+                        break;
+                    }
+                }
+
+                // Normal continue: still not enough
                 const wantsFollowUp = await prompter.confirm(
-                    `\n${followUpSummary}\nWould you like to dive deeper with follow-up questions? (${followUpQuestions.length} questions to go on.)`,
-                    // round < 3 // Default yes for first round
-                    true
+                    `\nSpecBaker confidence: ${confidenceScore}/100
+Reason: ${confidenceReason}
+
+${followUpSummary}
+
+There are ${followUpQuestions.length} important follow-up question(s).
+
+Would you like to continue answering them?`,
+                    confidenceScore < confidenceThreshold
                 );
 
                 if (!wantsFollowUp) {
-                    logger.info('✓ Proceeding with current level of detail.');
+                    logger.info('Stopping follow-up questions by user choice.');
                     break;
                 }
 
@@ -245,6 +280,7 @@ async function generateCommand(goal, options) {
     } catch (error) {
         const logger = getLogger();
         logger.error('Specification generation failed', error);
+        logger.debug(error);
 
         if (error.name === 'ConfigurationError') {
             console.error(chalk.yellow('\nRun "specbaker config setup" to configure SpecBaker.'));
