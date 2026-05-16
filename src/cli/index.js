@@ -111,7 +111,7 @@ ${chalk.bold('Examples:')}
   $ specbaker web --port 8080
 
 ${chalk.bold('Documentation:')}
-  ${chalk.cyan('https://github.com/yourusername/specbaker#readme')}
+  ${chalk.cyan('https://github.com/mekku/specbaker#readme')}
 `);
 }
 

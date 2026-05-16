@@ -67,7 +67,7 @@ npm install specbaker
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/specbaker.git
+git clone https://github.com/mekku/specbaker.git
 cd specbaker
 npm install
 npm link
@@ -328,7 +328,7 @@ Specification Output (Bob-Ready)
 ### Setup Development Environment
 
 ```bash
-git clone https://github.com/yourusername/specbaker.git
+git clone https://github.com/mekku/specbaker.git
 cd specbaker
 npm install
 ```
@@ -393,9 +393,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 📞 Support
 
-- 📧 Email: support@specbaker.dev
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/specbaker/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/specbaker/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/mekku/specbaker/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/mekku/specbaker/discussions)
 
 ## 🗺️ Roadmap
 

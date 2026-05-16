@@ -60,10 +60,10 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/yourusername/specbaker.git"
+        "url": "https://github.com/mekku/specbaker.git"
     },
     "bugs": {
-        "url": "https://github.com/yourusername/specbaker/issues"
+        "url": "https://github.com/mekku/specbaker/issues"
     },
-    "homepage": "https://github.com/yourusername/specbaker#readme"
+    "homepage": "https://github.com/mekku/specbaker#readme"
 }

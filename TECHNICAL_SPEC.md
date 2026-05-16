@@ -724,7 +724,7 @@ npm install -g specbaker
 npm install specbaker
 
 # From source
-git clone https://github.com/yourusername/specbaker.git
+git clone https://github.com/mekku/specbaker.git
 cd specbaker
 npm install
 npm link
